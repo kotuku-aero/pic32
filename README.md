@@ -22,5 +22,5 @@ Use the provided toolchain files:
 cmake -DCMAKE_TOOLCHAIN_FILE=cmake/pic32-EF-toolchain.cmake ..
 ## Building from Source
 
-See [mips32](https://gitea.kotuku.aero/kotuku/mips32) repository.
+See [mips32](https://github.com/kotuku-aero/mips32) repository.
 

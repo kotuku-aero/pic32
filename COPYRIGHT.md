@@ -356,5 +356,5 @@ The complete text of the licenses referenced above can be found at:
 This toolchain is maintained by Kotuku Aerospace Limited.
 
 - Website: https://kotuku.aero
-- Repository: https://gitea.kotuku.aero/kotuku/pic32
-- Build Scripts: https://gitea.kotuku.aero/kotuku/mips32
+- Repository: https://github.com/kotuku-aero/pic32
+- Build Scripts: https://github.com/kotuku-aero/mip32
