@@ -3,7 +3,7 @@
 ## Quick Install
 
 1. Download the latest release from [Releases](../../releases)
-2. Extract to `C:\pic32` (Windows) or `/opt/pic32` (Linux)
+2. Extract to `C:\pic32` (Windows) or `/opt/pic32` (MSYS2)
 3. Add `C:\pic32\bin` to your PATH
 
 ## Components
