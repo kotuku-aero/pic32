@@ -10,10 +10,10 @@
 
 | Component | Version |
 |-----------|---------|
-| GCC | 15.2.0 |
-| Binutils | 2.44 |
-| Newlib | 4.5.0 |
-| GDB | 16.2 |
+| GCC | 15.2.0  |
+| Binutils | 2.44    |
+| Newlib | 4.5.0   |
+| GDB | 15.2    |
 
 ## CMake Integration
 

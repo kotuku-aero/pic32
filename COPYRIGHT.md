@@ -82,7 +82,7 @@ MA 02110-1301, USA.
 
 ## GNU Debugger (GDB)
 
-**Version:** 16.2  
+**Version:** 15.2  
 **License:** GPL-3.0-or-later  
 **Website:** https://www.gnu.org/software/gdb/
 
