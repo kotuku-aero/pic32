@@ -14,37 +14,42 @@ set(CMAKE_SYSTEM_PROCESSOR mips)
 # Custom mips-elf-gcc toolchain location
 if(WIN32)
     set(TOOLCHAIN_PATH "C:/pic32" CACHE PATH "Path to mips-elf toolchain")
+    set(TOOLCHAIN_EXT ".exe")
 else()
     set(TOOLCHAIN_PATH "/opt/pic32" CACHE PATH "Path to mips-elf toolchain")
+    set(TOOLCHAIN_EXT "")
 endif()
 
 set(TOOLCHAIN_PREFIX "mips-elf-")
 
-# Compilers
-set(CMAKE_C_COMPILER "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}gcc${CMAKE_EXECUTABLE_SUFFIX}")
-set(CMAKE_CXX_COMPILER "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}g++${CMAKE_EXECUTABLE_SUFFIX}")
-set(CMAKE_ASM_COMPILER "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}gcc${CMAKE_EXECUTABLE_SUFFIX}")
+# Compilers - use explicit extension since CMAKE_EXECUTABLE_SUFFIX isn't set yet
+set(CMAKE_C_COMPILER "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}gcc${TOOLCHAIN_EXT}")
+set(CMAKE_CXX_COMPILER "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}g++${TOOLCHAIN_EXT}")
+set(CMAKE_ASM_COMPILER "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}gcc${TOOLCHAIN_EXT}")
 
 # Binary utilities
-set(CMAKE_AR "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}ar${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Archiver")
-set(CMAKE_RANLIB "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}ranlib${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Ranlib")
-set(CMAKE_OBJCOPY "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}objcopy${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Objcopy")
-set(CMAKE_OBJDUMP "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}objdump${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Objdump")
-set(CMAKE_SIZE "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}size${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "Size")
-set(CMAKE_NM "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}nm${CMAKE_EXECUTABLE_SUFFIX}" CACHE FILEPATH "NM")
+set(CMAKE_AR "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}ar${TOOLCHAIN_EXT}" CACHE FILEPATH "Archiver")
+set(CMAKE_RANLIB "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}ranlib${TOOLCHAIN_EXT}" CACHE FILEPATH "Ranlib")
+set(CMAKE_OBJCOPY "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}objcopy${TOOLCHAIN_EXT}" CACHE FILEPATH "Objcopy")
+set(CMAKE_OBJDUMP "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}objdump${TOOLCHAIN_EXT}" CACHE FILEPATH "Objdump")
+set(CMAKE_SIZE "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}size${TOOLCHAIN_EXT}" CACHE FILEPATH "Size")
+set(CMAKE_NM "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}nm${TOOLCHAIN_EXT}" CACHE FILEPATH "NM")
 
 # ============================================================================
 # DFP (Device Family Pack) Location
 # ============================================================================
 
 # Try to find DFP in multiple locations (in priority order):
-# 1. Git submodule location (for CI/CD and version-controlled builds)
-# 2. Alongside toolchain
+# 1. Alongside toolchain
+# 2. Git submodule location (for CI/CD and version-controlled builds)
 # 3. MPLABX installation (system-wide)
 
 if(EXISTS "${TOOLCHAIN_PATH}/dfp/PIC32MZ-EF")
     set(DFP_PATH "${TOOLCHAIN_PATH}/dfp/PIC32MZ-EF")
     message(STATUS "Using DFP from toolchain: ${DFP_PATH}")
+elseif(EXISTS "${CMAKE_SOURCE_DIR}/dfp/PIC32MZ-EF")
+    set(DFP_PATH "${CMAKE_SOURCE_DIR}/dfp/PIC32MZ-EF")
+    message(STATUS "Using DFP from project: ${DFP_PATH}")
 elseif(EXISTS "C:/Program Files/Microchip/MPLABX/v6.20/packs/Microchip/PIC32MZ-EF_DFP/1.5.173")
     set(DFP_PATH "C:/Program Files/Microchip/MPLABX/v6.20/packs/Microchip/PIC32MZ-EF_DFP/1.5.173")
     message(STATUS "Using DFP from MPLABX: ${DFP_PATH}")
@@ -150,24 +155,24 @@ set(PIC32_HAS_FPU TRUE CACHE BOOL "PIC32 has hardware FPU" FORCE)
 # Function to generate HEX file from ELF
 function(pic32_generate_hex TARGET)
     add_custom_command(TARGET ${TARGET} POST_BUILD
-        COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:${TARGET}> $<TARGET_FILE_DIR:${TARGET}>/${TARGET}.hex
-        COMMENT "Generating HEX file: ${TARGET}.hex"
+            COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:${TARGET}> $<TARGET_FILE_DIR:${TARGET}>/${TARGET}.hex
+            COMMENT "Generating HEX file: ${TARGET}.hex"
     )
 endfunction()
 
 # Function to generate BIN file from ELF
 function(pic32_generate_bin TARGET)
     add_custom_command(TARGET ${TARGET} POST_BUILD
-        COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${TARGET}> $<TARGET_FILE_DIR:${TARGET}>/${TARGET}.bin
-        COMMENT "Generating BIN file: ${TARGET}.bin"
+            COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${TARGET}> $<TARGET_FILE_DIR:${TARGET}>/${TARGET}.bin
+            COMMENT "Generating BIN file: ${TARGET}.bin"
     )
 endfunction()
 
 # Function to print size information
 function(pic32_print_size TARGET)
     add_custom_command(TARGET ${TARGET} POST_BUILD
-        COMMAND ${CMAKE_SIZE} --format=berkeley $<TARGET_FILE:${TARGET}>
-        COMMENT "Size of ${TARGET}:"
+            COMMAND ${CMAKE_SIZE} --format=berkeley $<TARGET_FILE:${TARGET}>
+            COMMENT "Size of ${TARGET}:"
     )
 endfunction()
 
