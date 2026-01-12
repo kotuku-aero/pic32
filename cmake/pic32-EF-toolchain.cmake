@@ -42,10 +42,7 @@ set(CMAKE_NM "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}nm${CMAKE_EXECUTABLE_SUFF
 # 2. Alongside toolchain
 # 3. MPLABX installation (system-wide)
 
-if(EXISTS "${CMAKE_SOURCE_DIR}/xc32/dfp/PIC32MZ-EF")
-    set(DFP_PATH "${CMAKE_SOURCE_DIR}/xc32/dfp/PIC32MZ-EF")
-    message(STATUS "Using DFP from git submodule: ${DFP_PATH}")
-elseif(EXISTS "${TOOLCHAIN_PATH}/dfp/PIC32MZ-EF")
+if(EXISTS "${TOOLCHAIN_PATH}/dfp/PIC32MZ-EF")
     set(DFP_PATH "${TOOLCHAIN_PATH}/dfp/PIC32MZ-EF")
     message(STATUS "Using DFP from toolchain: ${DFP_PATH}")
 elseif(EXISTS "C:/Program Files/Microchip/MPLABX/v6.20/packs/Microchip/PIC32MZ-EF_DFP/1.5.173")
