@@ -7,6 +7,10 @@ cmake_minimum_required(VERSION 3.16)
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_PROCESSOR mips)
 
+set(CMAKE_C_COMPILER_ID GNU)
+set(CMAKE_C_COMPILER_VERSION "15.2.0")
+set(CMAKE_CXX_COMPILER_ID GNU)
+set(CMAKE_CXX_COMPILER_VERSION "15.2.0")
 # ============================================================================
 # Toolchain Paths
 # ============================================================================
