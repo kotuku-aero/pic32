@@ -11,6 +11,7 @@ set(CMAKE_C_COMPILER_ID GNU)
 set(CMAKE_C_COMPILER_VERSION "15.2.0")
 set(CMAKE_CXX_COMPILER_ID GNU)
 set(CMAKE_CXX_COMPILER_VERSION "15.2.0")
+
 # ============================================================================
 # Toolchain Paths
 # ============================================================================
@@ -60,6 +61,18 @@ elseif(EXISTS "C:/Program Files/Microchip/MPLABX/v6.20/packs/Microchip/PIC32MZ-D
 else()
     message(WARNING "PIC32MZ-DA DFP not found in expected locations!")
     message(WARNING "Build may fail without device-specific headers and linker scripts.")
+    set(DFP_PATH "")
+endif()
+
+# Set DFP include path for device-specific headers (xc.h, p32xxxx.h, etc.)
+if(DFP_PATH)
+    set(DFP_INCLUDE_PATH "${DFP_PATH}/include")
+    if(EXISTS "${DFP_INCLUDE_PATH}")
+        message(STATUS "DFP include path: ${DFP_INCLUDE_PATH}")
+    else()
+        message(WARNING "DFP include directory not found: ${DFP_INCLUDE_PATH}")
+        set(DFP_INCLUDE_PATH "")
+    endif()
 endif()
 
 # ============================================================================
@@ -82,6 +95,13 @@ set(PIC32_WARN_FLAGS "-Wall -Wextra")
 # Combine architecture flags
 set(PIC32_CPU_FLAGS "${PIC32_ARCH_FLAGS} ${PIC32_MIPS_FLAGS}")
 
+# DFP include flag (if available)
+if(DFP_INCLUDE_PATH)
+    set(PIC32_DFP_FLAGS "-I${DFP_INCLUDE_PATH}")
+else()
+    set(PIC32_DFP_FLAGS "")
+endif()
+
 # ============================================================================
 # Compiler Flags
 # ============================================================================
@@ -91,15 +111,15 @@ set(CMAKE_C_COMPILER_WORKS 1)
 set(CMAKE_CXX_COMPILER_WORKS 1)
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
-# C Flags
-set(CMAKE_C_FLAGS_INIT "${PIC32_CPU_FLAGS} ${PIC32_WARN_FLAGS}")
+# C Flags - include DFP path for xc.h and device headers
+set(CMAKE_C_FLAGS_INIT "${PIC32_CPU_FLAGS} ${PIC32_DFP_FLAGS} ${PIC32_WARN_FLAGS}")
 set(CMAKE_C_FLAGS_DEBUG_INIT "-Og -g3 -DDEBUG")
 set(CMAKE_C_FLAGS_RELEASE_INIT "-O2 -DNDEBUG")
 set(CMAKE_C_FLAGS_MINSIZEREL_INIT "-Os -DNDEBUG")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO_INIT "-O2 -g -DNDEBUG")
 
-# C++ Flags
-set(CMAKE_CXX_FLAGS_INIT "${PIC32_CPU_FLAGS} ${PIC32_WARN_FLAGS} -fno-exceptions -fno-rtti")
+# C++ Flags - include DFP path for xc.h and device headers
+set(CMAKE_CXX_FLAGS_INIT "${PIC32_CPU_FLAGS} ${PIC32_DFP_FLAGS} ${PIC32_WARN_FLAGS} -fno-exceptions -fno-rtti")
 set(CMAKE_CXX_FLAGS_DEBUG_INIT "-Og -g3 -DDEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE_INIT "-O2 -DNDEBUG")
 set(CMAKE_CXX_FLAGS_MINSIZEREL_INIT "-Os -DNDEBUG")
@@ -118,7 +138,7 @@ set(PIC32_LINKER_FLAGS "-nostartfiles -Wl,--gc-sections")
 # --gc-sections = Remove unused code/data sections
 
 # Float printf support (optional - adds ~10-15KB)
-# Uncomment if you need printf("%f", ...) support
+# Uncomment if you need printf("%f", ...) support with soft-float
 # set(PIC32_LINKER_FLAGS "${PIC32_LINKER_FLAGS} -u _printf_float")
 
 # Float scanf support (optional - adds ~5-10KB)
@@ -144,6 +164,9 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 set(PIC32_BUILD TRUE CACHE BOOL "Building for PIC32" FORCE)
 set(PIC32_FAMILY "DA" CACHE STRING "PIC32 processor family" FORCE)
 set(PIC32_HAS_FPU FALSE CACHE BOOL "PIC32 has hardware FPU" FORCE)
+
+# Export DFP_PATH so projects can use it for linker scripts, etc.
+set(PIC32_DFP_PATH "${DFP_PATH}" CACHE PATH "Path to PIC32MZ-DA Device Family Pack" FORCE)
 
 # ============================================================================
 # Helper Functions
