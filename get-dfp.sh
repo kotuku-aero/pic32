@@ -32,24 +32,23 @@ DFP_INFO["PIC32MZ-DA"]="1.4.118|Microchip.PIC32MZ-DA_DFP.1.4.118.atpack"
 
 #-----------------------------------------------------------------------------
 # Utility Functions
+# NOTE: All logging goes to stderr (&2) so that functions can return values via stdout
 #-----------------------------------------------------------------------------
 
 log() {
-    echo ""
-    echo "========================================"
-    echo "$1"
-    echo "========================================"
-    echo ""
+    echo "" >&2
+    echo "========================================" >&2
+    echo "$1" >&2
+    echo "========================================" >&2
+    echo "" >&2
 }
 
 info() {
-    echo "[INFO] $1"
-    echo""
+    echo "[INFO] $1" >&2
 }
 
 warn() {
-    echo "[WARN] $1"
-    echo ""
+    echo "[WARN] $1" >&2
 }
 
 error() {
@@ -135,8 +134,8 @@ download_dfp() {
         info "Downloading ${name} v${version}..."
         info "URL: ${url}"
         
-        # Download directly to .zip filename
-        if ! wget -q --show-progress -O "${download_path}" "${url}"; then
+        # Download directly to .zip filename (wget output goes to stderr)
+        if ! wget --show-progress -O "${download_path}" "${url}"; then
             rm -f "${download_path}"
             error "Failed to download ${filename}"
         fi
@@ -144,6 +143,7 @@ download_dfp() {
         info "Download complete: ${download_path}"
     fi
     
+    # Return the path via stdout
     echo "${download_path}"
 }
 
@@ -165,13 +165,14 @@ extract_dfp() {
     
     mkdir -p "${extract_dir}"
     
-    info "Extracting ${name}..."
+    info "Extracting ${name} from ${archive}..."
     
     # .atpack files are just ZIP files
     unzip -q "${archive}" -d "${extract_dir}"
     
     info "Extracted to: ${extract_dir}"
     
+    # Return the path via stdout
     echo "${extract_dir}"
 }
 
@@ -200,7 +201,7 @@ patch_dfp() {
     # To:      __attribute__((section("sfrs")))
     info "Removing XC32-specific address() attributes..."
     find "${include_dir}" -name "*.h" -exec sed -i \
-        's/,address(0x[0-9A-Fa-f]*)//g' {} \;
+        's/,\s*address(0x[0-9A-Fa-f]*)//g' {} \;
     
     # Patch 2: Remove standalone address() attribute
     # Changes: __attribute__((address(0xBF820000)))
@@ -246,9 +247,6 @@ patch_dfp() {
     # Changes: section("sfrs"),)) to section("sfrs")))
     find "${include_dir}" -name "*.h" -exec sed -i \
         's/, *))/))/g' {} \;
-    
-    # Patch 10: Fix any __attribute__((section("sfrs"))) that lost the section name
-    # This shouldn't happen but let's be safe
     
     info "Patching complete for ${name}"
 }
@@ -357,25 +355,28 @@ process_dfp() {
     
     log "Processing ${name}"
     
-    # Download
-    local archive=$(download_dfp "$name" "$force")
+    # Download - capture return value
+    local archive
+    archive=$(download_dfp "$name" "$force")
     
-    # Extract
-    local dfp_dir=$(extract_dfp "$archive" "$name")
+    info "Archive path: ${archive}"
     
-    # Patch
+    # Extract - capture return value
+    local dfp_dir
+    dfp_dir=$(extract_dfp "$archive" "$name")
+    
+    info "DFP directory: ${dfp_dir}"
+    
+    # Patch (no return value needed)
     patch_dfp "$dfp_dir" "$name"
     
-    # Verify
+    # Verify (no return value needed)
     verify_dfp "$dfp_dir" "$name"
     
     log "${name} ready for use"
-    echo ""
-    echo "DFP installed to: ${dfp_dir}"
-    echo ""
-    echo "To use in your toolchain, ensure this path is set:"
-    echo "  DFP_PATH=${dfp_dir}"
-    echo ""
+    info "DFP installed to: ${dfp_dir}"
+    info "To use in your toolchain, ensure this path is set:"
+    info "  DFP_PATH=${dfp_dir}"
 }
 
 #-----------------------------------------------------------------------------
@@ -443,7 +444,7 @@ main() {
     fi
     
     log "All done!"
-    echo "Your DFPs are ready in: ${DFP_DIR}"
+    info "Your DFPs are ready in: ${DFP_DIR}"
 }
 
 main "$@"
