@@ -65,14 +65,17 @@ else()
 endif()
 
 # Set DFP include path for device-specific headers (xc.h, p32xxxx.h, etc.)
-if(DFP_PATH)
+set(DFP_INCLUDE_PATH "")
+if(DFP_PATH AND EXISTS "${DFP_PATH}/include")
     set(DFP_INCLUDE_PATH "${DFP_PATH}/include")
-    if(EXISTS "${DFP_INCLUDE_PATH}")
-        message(STATUS "DFP include path: ${DFP_INCLUDE_PATH}")
-    else()
-        message(WARNING "DFP include directory not found: ${DFP_INCLUDE_PATH}")
-        set(DFP_INCLUDE_PATH "")
-    endif()
+    message(STATUS "DFP include path: ${DFP_INCLUDE_PATH}")
+endif()
+
+# Set atom platform include path (for atom_pic32.h, etc.)
+set(ATOM_INCLUDE_PATH "")
+if(EXISTS "${TOOLCHAIN_PATH}/atom")
+    set(ATOM_INCLUDE_PATH "${TOOLCHAIN_PATH}/atom")
+    message(STATUS "Atom include path: ${ATOM_INCLUDE_PATH}")
 endif()
 
 # ============================================================================
@@ -102,11 +105,13 @@ set(PIC32_WARN_FLAGS "-Wall -Wextra")
 # Combine architecture flags
 set(PIC32_CPU_FLAGS "${PIC32_ARCH_FLAGS} ${PIC32_MIPS_FLAGS}")
 
-# DFP include flag (if available)
+# Build include flags string
+set(PIC32_INCLUDE_FLAGS "")
+if(ATOM_INCLUDE_PATH)
+    set(PIC32_INCLUDE_FLAGS "${PIC32_INCLUDE_FLAGS} -I${ATOM_INCLUDE_PATH}")
+endif()
 if(DFP_INCLUDE_PATH)
-    set(PIC32_DFP_FLAGS "-I${DFP_INCLUDE_PATH}")
-else()
-    set(PIC32_DFP_FLAGS "")
+    set(PIC32_INCLUDE_FLAGS "${PIC32_INCLUDE_FLAGS} -I${DFP_INCLUDE_PATH}")
 endif()
 
 # ============================================================================
@@ -118,15 +123,15 @@ set(CMAKE_C_COMPILER_WORKS 1)
 set(CMAKE_CXX_COMPILER_WORKS 1)
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
-# C Flags - include DFP path for xc.h and device headers
-set(CMAKE_C_FLAGS_INIT "${PIC32_CPU_FLAGS} ${PIC32_DFP_FLAGS} ${PIC32_WARN_FLAGS}")
+# C Flags - include atom and DFP paths
+set(CMAKE_C_FLAGS_INIT "${PIC32_CPU_FLAGS}${PIC32_INCLUDE_FLAGS} ${PIC32_WARN_FLAGS}")
 set(CMAKE_C_FLAGS_DEBUG_INIT "-Og -g3 -DDEBUG")
 set(CMAKE_C_FLAGS_RELEASE_INIT "-O2 -DNDEBUG")
 set(CMAKE_C_FLAGS_MINSIZEREL_INIT "-Os -DNDEBUG")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO_INIT "-O2 -g -DNDEBUG")
 
-# C++ Flags - include DFP path for xc.h and device headers
-set(CMAKE_CXX_FLAGS_INIT "${PIC32_CPU_FLAGS} ${PIC32_DFP_FLAGS} ${PIC32_WARN_FLAGS} -fno-exceptions -fno-rtti")
+# C++ Flags - include atom and DFP paths
+set(CMAKE_CXX_FLAGS_INIT "${PIC32_CPU_FLAGS}${PIC32_INCLUDE_FLAGS} ${PIC32_WARN_FLAGS} -fno-exceptions -fno-rtti")
 set(CMAKE_CXX_FLAGS_DEBUG_INIT "-Og -g3 -DDEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE_INIT "-O2 -DNDEBUG")
 set(CMAKE_CXX_FLAGS_MINSIZEREL_INIT "-Os -DNDEBUG")
@@ -165,15 +170,18 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 
 # ============================================================================
-# Build Identification
+# Build Identification - Export as CACHE variables for use in CMakeLists.txt
 # ============================================================================
 
 set(PIC32_BUILD TRUE CACHE BOOL "Building for PIC32" FORCE)
 set(PIC32_FAMILY "EF" CACHE STRING "PIC32 processor family" FORCE)
 set(PIC32_HAS_FPU TRUE CACHE BOOL "PIC32 has hardware FPU" FORCE)
 
-# Export DFP_PATH so projects can use it for linker scripts, etc.
+# Export paths so projects can use them
 set(PIC32_DFP_PATH "${DFP_PATH}" CACHE PATH "Path to PIC32MZ-EF Device Family Pack" FORCE)
+set(PIC32_DFP_INCLUDE_PATH "${DFP_INCLUDE_PATH}" CACHE PATH "Path to DFP include directory" FORCE)
+set(PIC32_ATOM_INCLUDE_PATH "${ATOM_INCLUDE_PATH}" CACHE PATH "Path to atom platform headers" FORCE)
+set(PIC32_TOOLCHAIN_PATH "${TOOLCHAIN_PATH}" CACHE PATH "Path to PIC32 toolchain" FORCE)
 
 # ============================================================================
 # Helper Functions
@@ -208,4 +216,15 @@ function(pic32_firmware TARGET)
     pic32_generate_hex(${TARGET})
     pic32_generate_bin(${TARGET})
     pic32_print_size(${TARGET})
+endfunction()
+
+# Function to add PIC32 platform include directories to a target
+# Use this in your CMakeLists.txt: pic32_add_platform_includes(your_target)
+function(pic32_add_platform_includes TARGET)
+    if(PIC32_ATOM_INCLUDE_PATH)
+        target_include_directories(${TARGET} PUBLIC ${PIC32_ATOM_INCLUDE_PATH})
+    endif()
+    if(PIC32_DFP_INCLUDE_PATH)
+        target_include_directories(${TARGET} PUBLIC ${PIC32_DFP_INCLUDE_PATH})
+    endif()
 endfunction()
