@@ -9,9 +9,6 @@
 // if there is an error that the processor can't be found then it means
 // the -D__PIC32MZ2048EFH064__ is not in the project makefile
 
-// HACK... for testing only
-#define __32MZ2048EFH064__
-
 // only works if the include path to the archiecture is set.
 #include <xc.h>
 
