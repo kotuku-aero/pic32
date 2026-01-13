@@ -14,8 +14,9 @@
  *   }
  */
 
+#ifdef HAS_NAKED
 #define interrupt(name) \
-__attribute__((naked, section(".vector" #name))) interrupt_##name (void) { \
+__attribute__((interrupt, section(".vector" #name))) interrupt_##name (void) { \
   asm volatile( \
       ".set push              \n" \
       ".set noreorder         \n" \
@@ -30,7 +31,7 @@ __attribute__((naked, section(".vector" #name))) interrupt_##name (void) { \
       "mflo   $k1             \n" \
       "sw     $k0, 12($sp)    \n" \
       "sw     $k1, 16($sp)    \n" \
-      "jal    __interrupt_" ##name## "_impl  \n" \
+      "jal    __interrupt_" #name "_impl  \n" \
       "nop                    \n" \
       "lw     $k1, 16($sp)    \n" \
       "lw     $k0, 12($sp)    \n" \
@@ -46,6 +47,21 @@ __attribute__((naked, section(".vector" #name))) interrupt_##name (void) { \
       "eret                   \n" \
       ".set pop               \n" \
   ); } \
-void __interrupt_##name##_impl
+void __interrupt_##name##_impl()
+#else
+#define interrupt_handler(vector) \
+__attribute__((section(".vector_" #vector), naked)) \
+__vector_dispatch_##vector(void) { \
+__asm__ __volatile__ ( \
+".set push\n" \
+".set noreorder\n" \
+"j __isr_impl_" #vector "\n" \
+"nop\n" \
+".set pop\n" \
+); \
+} \
+__attribute__((interrupt, keep_interrupts_masked)) \
+void __isr_impl_##vector (void)
+#endif
 
 #endif

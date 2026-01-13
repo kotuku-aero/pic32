@@ -196,6 +196,10 @@ patch_dfp() {
     local file_count=$(find "${include_dir}" -name "*.h" | wc -l)
     info "Found ${file_count} header files to process"
     
+    # =========================================================================
+    # PHASE 1: Remove XC32-specific attributes
+    # =========================================================================
+    
     # Patch 1: Remove address() attribute (XC32-specific)
     # Changes: __attribute__((section("sfrs"),address(0xBF820000)))
     # To:      __attribute__((section("sfrs")))
@@ -212,41 +216,74 @@ patch_dfp() {
     # Patch 3: Remove unsupported() attribute (XC32-specific)
     info "Removing XC32-specific unsupported() attributes..."
     find "${include_dir}" -name "*.h" -exec sed -i \
-        's/,unsupported//g' {} \;
+        's/,\s*unsupported//g' {} \;
     find "${include_dir}" -name "*.h" -exec sed -i \
         's/__attribute__((unsupported))//g' {} \;
     
     # Patch 4: Remove space() attribute (XC32-specific for program/data space)
     info "Removing XC32-specific space() attributes..."
     find "${include_dir}" -name "*.h" -exec sed -i \
-        's/,space([^)]*)//g' {} \;
+        's/,\s*space([^)]*)//g' {} \;
     find "${include_dir}" -name "*.h" -exec sed -i \
         's/__attribute__((space([^)]*)))//g' {} \;
         
     # Patch 5: Remove unique_section attribute
     info "Removing unique_section attributes..."
     find "${include_dir}" -name "*.h" -exec sed -i \
-        's/,unique_section//g' {} \;
+        's/,\s*unique_section//g' {} \;
+
+    # =========================================================================
+    # PHASE 2: Remove section() attributes from extern declarations
+    # Standard GCC doesn't allow storage class specifiers on extern declarations
+    # The actual memory placement is handled by the linker script
+    # =========================================================================
     
-    # Patch 6: Clean up empty attribute lists
+    info "Removing section() attributes from extern declarations..."
+    
+    # Patch 6: Remove section("sfrs") attribute - this is the most common
+    # Changes: extern volatile uint32_t FOO __attribute__((section("sfrs")));
+    # To:      extern volatile uint32_t FOO;
+    find "${include_dir}" -name "*.h" -exec sed -i \
+        's/__attribute__((section("sfrs")))//g' {} \;
+    
+    # Patch 7: Remove any other section attributes that might remain
+    # Changes: __attribute__((section("...")))
+    # To:      (nothing)
+    find "${include_dir}" -name "*.h" -exec sed -i \
+        's/__attribute__((section("[^"]*")))//g' {} \;
+
+    # =========================================================================
+    # PHASE 3: Clean up any malformed attribute remnants
+    # =========================================================================
+    
+    info "Cleaning up attribute remnants..."
+    
+    # Patch 8: Clean up empty attribute lists
     # Changes: __attribute__(()) to nothing
-    info "Cleaning up empty attribute lists..."
     find "${include_dir}" -name "*.h" -exec sed -i \
         's/__attribute__(())//g' {} \;
     
-    # Patch 7: Clean up double commas in remaining attributes
+    # Patch 9: Clean up double commas in remaining attributes
     find "${include_dir}" -name "*.h" -exec sed -i \
         's/,,/,/g' {} \;
     
-    # Patch 8: Clean up leading commas in attributes
+    # Patch 10: Clean up leading commas in attributes
     # Changes: __attribute__((,section to __attribute__((section
     find "${include_dir}" -name "*.h" -exec sed -i \
-        's/__attribute__(( *,/__attribute__((/g' {} \;
+        's/__attribute__((\s*,/__attribute__((/g' {} \;
     
-    # Patch 9: Clean up trailing commas in attributes  
+    # Patch 11: Clean up trailing commas in attributes  
     # Changes: section("sfrs"),)) to section("sfrs")))
     find "${include_dir}" -name "*.h" -exec sed -i \
-        's/, *))/))/g' {} \;
+        's/,\s*))/))/g' {} \;
+    
+    # Patch 12: Clean up multiple spaces left behind
+    find "${include_dir}" -name "*.h" -exec sed -i \
+        's/  \+/ /g' {} \;
+    
+    # Patch 13: Clean up space before semicolon
+    find "${include_dir}" -name "*.h" -exec sed -i \
+        's/ \+;/;/g' {} \;
     
     info "Patching complete for ${name}"
 }
@@ -296,9 +333,10 @@ verify_dfp() {
         local test_file=$(mktemp --suffix=.c)
         local test_out=$(mktemp --suffix=.o)
         
+        # Test with the short processor define that Microchip headers expect
         cat > "${test_file}" << 'EOF'
 #define __PIC32MZ__
-#define __PIC32MZ2048EFH064__
+#define __32MZ2048EFH064__
 #include <xc.h>
 int main(void) { return 0; }
 EOF
