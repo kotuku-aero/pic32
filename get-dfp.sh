@@ -3,7 +3,7 @@
 # get-dfp.sh - Download and patch Microchip Device Family Packs for use with vanilla GCC
 #
 # This script downloads DFP files from Microchip, extracts them, and patches
-# the headers to work with standard GCC (removing XC32-specific extensions).
+# the headers and linker scripts to work with standard GCC (removing XC32-specific extensions).
 #
 # Usage:
 #   ./get-dfp.sh PIC32MZ-EF          # Download and patch PIC32MZ-EF DFP
@@ -177,10 +177,10 @@ extract_dfp() {
 }
 
 #-----------------------------------------------------------------------------
-# Patching Functions
+# Header Patching Functions
 #-----------------------------------------------------------------------------
 
-patch_dfp() {
+patch_headers() {
     local dfp_dir="$1"
     local name="$2"
     
@@ -285,7 +285,172 @@ patch_dfp() {
     find "${include_dir}" -name "*.h" -exec sed -i \
         's/ \+;/;/g' {} \;
     
-    info "Patching complete for ${name}"
+    info "Header patching complete for ${name}"
+}
+
+#-----------------------------------------------------------------------------
+# Linker Script Patching Functions
+#-----------------------------------------------------------------------------
+
+patch_linker_scripts() {
+    local dfp_dir="$1"
+    local name="$2"
+    
+    log "Patching ${name} linker scripts for vanilla GCC"
+    
+    # Find all linker scripts in the DFP
+    local ld_count=$(find "${dfp_dir}" -name "*.ld" | wc -l)
+    info "Found ${ld_count} linker scripts to process"
+    
+    # =========================================================================
+    # PHASE 1: Fix architecture specification
+    # =========================================================================
+    
+    info "Fixing OUTPUT_ARCH for vanilla GNU ld..."
+    
+    # Change OUTPUT_ARCH(pic32mx) to OUTPUT_ARCH(mips)
+    # XC32 uses pic32mx which vanilla ld doesn't recognize
+    find "${dfp_dir}" -name "*.ld" -exec sed -i \
+        's/OUTPUT_ARCH(pic32mx)/OUTPUT_ARCH(mips)/g' {} \;
+    
+    # Also handle OUTPUT_ARCH(pic32mz) if present
+    find "${dfp_dir}" -name "*.ld" -exec sed -i \
+        's/OUTPUT_ARCH(pic32mz)/OUTPUT_ARCH(mips)/g' {} \;
+
+    # =========================================================================
+    # PHASE 2: Fix OPTIONAL() directives that vanilla ld might not handle
+    # =========================================================================
+    
+    info "Fixing OPTIONAL() directives..."
+    
+    # Remove OPTIONAL() wrapper but keep the content
+    find "${dfp_dir}" -name "*.ld" -exec sed -i \
+       's/OPTIONAL(\([^)]*\))//g' {} \;
+
+    info "Fixing OUTPUT_FORMAT() directives..."
+
+    find "${dfp_dir}" -name "*.ld" -exec sed -i \
+           's/OUTPUT_FORMAT("elf32-tradlittlemips")/OUTPUT_FORMAT("elf32-littlemips")/g' {} \;
+
+
+    # =========================================================================
+    # PHASE 4: Add custom sections for vanilla GCC compatibility
+    # These sections are needed for features like:
+    # - .coherent: DMA buffers in uncached memory (KSEG1)
+    # - .config_*: Configuration bits
+    # =========================================================================
+    
+    info "Adding custom sections to linker scripts..."
+    
+    # Process each linker script that contains SECTIONS
+    find "${dfp_dir}" -name "*.ld" | while read -r ldfile; do
+        if grep -q "^SECTIONS" "$ldfile" 2>/dev/null; then
+            patch_single_linker_script "$ldfile"
+        fi
+    done
+    
+    info "Linker script patching complete for ${name}"
+}
+
+patch_single_linker_script() {
+    local ldfile="$1"
+    local basename_ld=$(basename "$ldfile")
+    
+    info "  Patching sections in: ${basename_ld}"
+    
+    # Create a temporary file for the patched content
+    local tmpfile=$(mktemp)
+    
+    # -------------------------------------------------------------------------
+    # Strategy: Append our custom sections before the final closing brace
+    # of the SECTIONS block. We do this by:
+    # 1. Finding the line number of the last '}' that closes SECTIONS
+    # 2. Inserting our sections before that line
+    # -------------------------------------------------------------------------
+    
+    # Check if .coherent already exists
+    if ! grep -q '\.coherent' "$ldfile"; then
+        # Find if kseg1_data_mem is defined (for coherent section)
+        if grep -q 'kseg1_data_mem' "$ldfile"; then
+            # Add coherent section - insert before the last closing brace
+            # Use awk for more reliable multi-line insertion
+            awk '
+            /^}[[:space:]]*$/ && !done {
+                print ""
+                print "  /* =================================================================="
+                print "   * Coherent (uncached) data section for DMA buffers"
+                print "   * Use: __attribute__((section(\".coherent\"))) or __attribute__((coherent))"
+                print "   * This places data in KSEG1 (uncached) memory region"
+                print "   * =================================================================== */"
+                print "  .coherent (NOLOAD) :"
+                print "  {"
+                print "    . = ALIGN(16);"
+                print "    _coherent_begin = .;"
+                print "    *(.coherent)"
+                print "    *(.coherent.*)"
+                print "    . = ALIGN(16);"
+                print "    _coherent_end = .;"
+                print "  } > kseg1_data_mem"
+                print ""
+                done = 1
+            }
+            { print }
+            ' "$ldfile" > "$tmpfile" && mv "$tmpfile" "$ldfile"
+        fi
+    fi
+    
+    # Check if config sections already exist
+    if ! grep -q '\.config_BFC0FFC0' "$ldfile"; then
+        # Add configuration bit sections
+        awk '
+        /^}[[:space:]]*$/ && !config_done {
+            print ""
+            print "  /* =================================================================="
+            print "   * Configuration bit sections for vanilla GCC"  
+            print "   * Use the macros in pic32mz_config.h to define configuration words"
+            print "   * =================================================================== */"
+            print "  .config_BFC0FFC0 0xBFC0FFC0 : { KEEP(*(.config_BFC0FFC0)) }"
+            print "  .config_BFC0FFC4 0xBFC0FFC4 : { KEEP(*(.config_BFC0FFC4)) }"
+            print "  .config_BFC0FFC8 0xBFC0FFC8 : { KEEP(*(.config_BFC0FFC8)) }"
+            print "  .config_BFC0FFCC 0xBFC0FFCC : { KEEP(*(.config_BFC0FFCC)) }"
+            print "  .config_BFC0FFD0 0xBFC0FFD0 : { KEEP(*(.config_BFC0FFD0)) }"
+            print "  .config_BFC0FFD4 0xBFC0FFD4 : { KEEP(*(.config_BFC0FFD4)) }"
+            print "  .config_BFC0FFD8 0xBFC0FFD8 : { KEEP(*(.config_BFC0FFD8)) }"
+            print "  .config_BFC0FFDC 0xBFC0FFDC : { KEEP(*(.config_BFC0FFDC)) }"
+            print "  .config_BFC0FFE0 0xBFC0FFE0 : { KEEP(*(.config_BFC0FFE0)) }"
+            print "  .config_BFC0FFE4 0xBFC0FFE4 : { KEEP(*(.config_BFC0FFE4)) }"
+            print "  .config_BFC0FFE8 0xBFC0FFE8 : { KEEP(*(.config_BFC0FFE8)) }"
+            print "  .config_BFC0FFEC 0xBFC0FFEC : { KEEP(*(.config_BFC0FFEC)) }"
+            print "  .config_BFC0FFF0 0xBFC0FFF0 : { KEEP(*(.config_BFC0FFF0)) }"
+            print "  .config_BFC0FFF4 0xBFC0FFF4 : { KEEP(*(.config_BFC0FFF4)) }"
+            print "  .config_BFC0FFF8 0xBFC0FFF8 : { KEEP(*(.config_BFC0FFF8)) }"
+            print "  .config_BFC0FFFC 0xBFC0FFFC : { KEEP(*(.config_BFC0FFFC)) }"
+            print "  /* Boot Flash sequence */"
+            print "  .config_BFC0FF40 0xBFC0FF40 : { KEEP(*(.config_BFC0FF40)) }"
+            print ""
+            config_done = 1
+        }
+        { print }
+        ' "$ldfile" > "$tmpfile" && mv "$tmpfile" "$ldfile"
+    fi
+    
+    # Clean up temp file if it still exists
+    rm -f "$tmpfile" 2>/dev/null || true
+}
+
+#-----------------------------------------------------------------------------
+# Main Patching Entry Point
+#-----------------------------------------------------------------------------
+
+patch_dfp() {
+    local dfp_dir="$1"
+    local name="$2"
+    
+    # Patch headers first
+    patch_headers "$dfp_dir" "$name"
+    
+    # Then patch linker scripts
+    patch_linker_scripts "$dfp_dir" "$name"
 }
 
 #-----------------------------------------------------------------------------
@@ -324,6 +489,29 @@ verify_dfp() {
     else
         warn "[MISSING] proc/ directory"
         all_ok=false
+    fi
+    
+    # Check linker script patching
+    info "Verifying linker script patches..."
+    local sample_ld=$(find "${dfp_dir}" -name "*.ld" -print -quit)
+    if [ -n "$sample_ld" ]; then
+        if grep -q "OUTPUT_ARCH(mips)" "$sample_ld"; then
+            info "[OK] OUTPUT_ARCH patched to 'mips'"
+        else
+            warn "[WARN] OUTPUT_ARCH may not be patched correctly"
+        fi
+        
+        if grep -q "\.coherent" "$sample_ld"; then
+            info "[OK] .coherent section added"
+        else
+            info "[INFO] .coherent section not added (may not have kseg1_data_mem)"
+        fi
+        
+        if grep -q "\.config_BFC0FFC0" "$sample_ld"; then
+            info "[OK] Configuration bit sections added"
+        else
+            warn "[WARN] Configuration bit sections may not be added"
+        fi
     fi
     
     # Test compile a simple check (if gcc available)

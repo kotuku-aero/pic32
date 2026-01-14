@@ -51,5 +51,60 @@
     __asm__(".section .gnu.warning.sym ; .ascii msg ; .previous")
 
 #endif
+/* Fix missing BSD macros in newlib for GCC 15 */
+#ifndef __pure
+#define __pure __attribute__((__pure__))
+#endif
+
+#ifndef __pure2
+#define __pure2 __attribute__((__const__))
+#endif
+
+#ifndef __dead2
+#define __dead2 __attribute__((__noreturn__))
+#endif
+
+#ifndef __unused
+#define __unused __attribute__((__unused__))
+#endif
+
+#ifndef __malloc_like
+#define __malloc_like __attribute__((__malloc__))
+#endif
+
+#ifndef __result_use_check
+#define __result_use_check __attribute__((__warn_unused_result__))
+#endif
+
+#ifndef __alloc_size
+#define __alloc_size(x) __attribute__((__alloc_size__(x)))
+#endif
+
+#ifndef __alloc_size2
+#define __alloc_size2(n, m) __attribute__((__alloc_size__(n, m)))
+#endif
+
+#ifndef __returns_twice
+#define __returns_twice __attribute__((__returns_twice__))
+#endif
+
+#ifndef __nonnull
+#define __nonnull(params) __attribute__((__nonnull__ params))
+#endif
+#ifndef __ASMNAME
+#define __ASMNAME(cname) __XSTRING(cname)
+#endif
+
+#ifndef __XSTRING
+#define __XSTRING(x) __STRING(x)
+#endif
+
+#ifndef __STRING
+#define __STRING(x) #x
+#endif
+
+#ifndef __alloc_align
+#define __alloc_align(x) __attribute__((__alloc_align__(x)))
+#endif
 
 #endif /* !_MIPS_CDEFS_H_ */
