@@ -106,7 +106,7 @@ BMXDUPBA = 0xBF882030
         # Debug Exception Vector Handler
         # If we get a debug exception in release mode, just return
         ##################################################################
-        .section ._debug_exception,code,address(0xBFC00480),keep
+        .section ._debug_exception, "ax"
         .global __DbgExecReturn
         .set noreorder
         .set noat

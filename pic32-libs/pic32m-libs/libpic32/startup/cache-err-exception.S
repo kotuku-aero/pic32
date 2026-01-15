@@ -106,7 +106,7 @@ BMXDUPBA = 0xBF882030
 
   .weak __exception_handler_break
 
-  .section .text._cache_err_exception_context, code
+  .section .text._cache_err_exception_context
   .set noreorder
   .set noat
   .set nomips16

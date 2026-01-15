@@ -1,5 +1,5 @@
 	.weak __vector_dispatch_47
-	.section	.vector_47,code
+	.section .vector_47, "ax"
 	.align	2
 	.set	nomips16
 	.ent	__vector_dispatch_47

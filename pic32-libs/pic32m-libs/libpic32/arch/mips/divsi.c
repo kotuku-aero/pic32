@@ -56,8 +56,8 @@
  */
 
 
-
-#include <machine/types.h>
+#include <sys/types.h>
+// #include <machine/types.h>
 #include <limits.h>
 
 #ifdef TEST

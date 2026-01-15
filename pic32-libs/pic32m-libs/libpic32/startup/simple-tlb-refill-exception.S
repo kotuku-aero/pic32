@@ -105,7 +105,7 @@ BMXDUPBA = 0xBF882030
 
   .weak __exception_handler_break
 
-  .section .text.simple_tlb_refill_context, code
+  .section .text.simple_tlb_refill_context
   .set noreorder
   .set noat
   .set nomips16

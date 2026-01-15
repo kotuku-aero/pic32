@@ -6,7 +6,7 @@ set(TOOLCHAIN_PREFIX "mips-elf" CACHE STRING "Toolchain prefix")
 
 # Determine install locations
 if(NOT CMAKE_INSTALL_PREFIX)
-    set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/../.." CACHE PATH "Install prefix" FORCE)
+    set(CMAKE_INSTALL_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/../../atom/" CACHE PATH "Install prefix" FORCE)
 endif()
 
 set(INSTALL_LIB_DIR "${CMAKE_INSTALL_PREFIX}/${TOOLCHAIN_PREFIX}/lib" CACHE PATH "Library install directory")

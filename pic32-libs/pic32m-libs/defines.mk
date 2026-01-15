@@ -15,13 +15,13 @@ GPOPT	= -mno-gpopt -mexplicit-relocs
 DEBUG	= -g -fvar-tracking
 ASSERT	= -DNDEBUG=1
 ARCH_FLAGS = -march=m14k -msoft-float
-PLATFORM = -ffreestanding -ffunction-sections $(ARCH_FLAGS)  -D_GNU_SOURCE -v
+PLATFORM = -ffreestanding -ffunction-sections $(ARCH_FLAGS)  -D_GNU_SOURCE
 CFLAGS	= $(VAR) $(OPTIM) $(GPOPT) $(DEBUG) $(ASSERT) $(EXCEPT) $(PLATFORM)
 ASFLAGS	= $(VAR) $(ASSERT) $(EXCEPT) $(PLATFORM)
 STRIPFLAGS =-X
 ARCH	=mips
 
-DESTROOT        =$(HOME)/xc32/build/install-image
+DESTROOT    =/c/pic32/atom
 TGTDESTDIR	=$(DESTROOT)/$(TARGET)
 TGTLIBSRC	=$(DESTROOT)/pic32-libs
 LIBDESTDIR	=$(TGTDESTDIR)/lib
