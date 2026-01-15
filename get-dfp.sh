@@ -439,18 +439,70 @@ patch_single_linker_script() {
 }
 
 #-----------------------------------------------------------------------------
+# Startup File Patching Functions
+#-----------------------------------------------------------------------------
+
+patch_startup_files() {
+    local dfp_dir="$1"
+    local name="$2"
+
+    log "Patching ${name} startup files for vanilla GCC"
+
+    # Find all assembly startup files in the DFP
+    local asm_count=$(find "${dfp_dir}" -path "*/xc32/startup/*.S" | wc -l)
+    info "Found ${asm_count} startup assembly files to process"
+
+    if [ $asm_count -eq 0 ]; then
+        info "No startup files found, skipping..."
+        return
+    fi
+
+    # =========================================================================
+    # PHASE 1: Convert XC32-specific section attributes to GNU syntax
+    # =========================================================================
+
+    info "Converting XC32 section attributes to standard GNU syntax..."
+
+    # Patch 1: Convert .section NAME,code,keep to .section NAME,"ax",@progbits
+    # The "ax" flags mean: a=allocatable, x=executable
+    # @progbits means the section contains data (not @nobits which is BSS)
+    find "${dfp_dir}" -path "*/xc32/startup/*.S" -exec sed -i \
+        's/\.section \([^,]*\),code,keep/.section \1,"ax",@progbits/g' {} \;
+
+    # Patch 2: Convert .section NAME,code (at end of line) to .section NAME,"ax",@progbits
+    # Handles cases like: .section .gen_handler,code
+    find "${dfp_dir}" -path "*/xc32/startup/*.S" -exec sed -i \
+        's/\.section \([^,]*\),code$/\.section \1,"ax",@progbits/g' {} \;
+
+    # Patch 2b: Convert .section NAME, code$ (with optional space, at end of line)
+    # Handles cases like: .section .text.general_exception, code
+    find "${dfp_dir}" -path "*/xc32/startup/*.S" -exec sed -i \
+        's/\.section \([^,]*\), *code$/\.section \1,"ax",@progbits/g' {} \;
+
+    # Patch 3: Handle any remaining standalone ,keep attributes
+    # (shouldn't be needed after above patches, but just in case)
+    find "${dfp_dir}" -path "*/xc32/startup/*.S" -exec sed -i \
+        's/,keep//g' {} \;
+
+    info "Startup file patching complete for ${name}"
+}
+
+#-----------------------------------------------------------------------------
 # Main Patching Entry Point
 #-----------------------------------------------------------------------------
 
 patch_dfp() {
     local dfp_dir="$1"
     local name="$2"
-    
+
     # Patch headers first
     patch_headers "$dfp_dir" "$name"
-    
+
     # Then patch linker scripts
     patch_linker_scripts "$dfp_dir" "$name"
+
+    # Finally patch startup assembly files
+    patch_startup_files "$dfp_dir" "$name"
 }
 
 #-----------------------------------------------------------------------------
