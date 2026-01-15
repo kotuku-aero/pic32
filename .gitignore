@@ -8,6 +8,7 @@
 /.idea/
 **/OBJ/*
 /downloads/
+/staging/
 
 # Ignore mips-elf except specific items
 /mips-elf/*
