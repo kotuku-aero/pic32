@@ -21,9 +21,9 @@ CPPFLAGS	=-I$(INCDESTDIR)
 
 # Optimise library for speed, not size
 # But this library aliases all over the place, so switch off
-# strict aliasing rules	
+# strict aliasing rules
 OPTIM = -Os -fno-strict-aliasing -fno-optimize-sibling-calls
-PLATFORM += -minterlink-mips16 -mno-smart-io -mdspr2 -mno-mips16
+PLATFORM += -mdspr2 -mno-mips16
 
 libdspr2.a: $(LIBOBJ)
 	$(STRIP) $(STRIPFLAGS) $(LIBOBJ)

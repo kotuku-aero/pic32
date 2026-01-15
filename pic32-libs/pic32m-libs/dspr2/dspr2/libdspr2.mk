@@ -8,8 +8,8 @@ include 	$(ROOT)/src/Makefile.inc
 vpath	%.S	$(_VPATH)
 vpath	%.c	$(_VPATH)
 
-CPPFLAGS	=-I$(INCDESTDIR) -I$(ROOT)/../include -minterlink-mips16 -mno-jals -mno-smart-io
-CFLAGS		+=$(VAR) -DNDEBUG=1 -minterlink-mips16 -mno-jals -mno-smart-io
+CPPFLAGS	=-I$(INCDESTDIR) -I$(ROOT)/../include -mdspr2 -mno-jals
+CFLAGS		+=$(VAR) -DNDEBUG=1 -mno-jals
 CFLAGS      +=-mdspr2 -mno-mips16
 ASFLAGS		+=$(VAR)
 

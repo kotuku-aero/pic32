@@ -44,7 +44,7 @@
  * *******************************End Copyright************************************
  */
 
-#include "dsplib_video.h"
+#include "../../include/dsplib_video.h"
 
 
 // Inverse quantization coefficients per 8.5.5 of JVT-G050 (JVT:8.5.5).

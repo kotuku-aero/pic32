@@ -16,9 +16,9 @@ vpath	Makefile	$(_VPATH)
 # Force optimisation, but no inlining/unrolling
 OPTIM	=-O2 -fno-inline-functions -fno-unroll-loops \
 	 -foptimize-sibling-calls -ffunction-sections \
-	 -fno-common -fno-builtin-exit -fno-builtin-abort -minterlink-mips16 \
+	 -fno-common -fno-builtin-exit -fno-builtin-abort -mdspr2 \
 	 -fno-jump-tables
-PLATFORM += -fframe-base-loclist -mno-smart-io -Wcast-align -Wall
+PLATFORM += -fframe-base-loclist -Wcast-align -Wall
 
 CPPFLAGS = -DNDEBUG=1 -D__LIBBUILD__ -I$(ROOT)/include -I$(ROOT)/../include
 

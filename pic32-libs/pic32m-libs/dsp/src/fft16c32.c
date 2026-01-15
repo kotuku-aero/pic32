@@ -1,4 +1,4 @@
-#include <dsplib_dsp.h>
+#include "../../include/dsplib_dsp.h"
 
 const int16c fft16c32[16] =
 {

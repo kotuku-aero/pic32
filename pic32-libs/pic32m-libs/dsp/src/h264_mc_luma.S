@@ -74,7 +74,7 @@ mips_h264_mc_luma:
 	j	$2
 	nop
 
-	.section .rodata,code
+	.section .rodata
 	.align	2
 .L77:
 	.word	.L3

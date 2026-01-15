@@ -44,7 +44,7 @@
  * *******************************End Copyright************************************
  */
 
-#include "dsplib_def.h" 
+#include "../../../include/dsplib_def.h"
 
 #include "mips_unaligned.h"
 

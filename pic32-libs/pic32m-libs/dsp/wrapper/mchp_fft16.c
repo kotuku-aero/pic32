@@ -15,8 +15,8 @@
  * Software License Agreement
  *
  * The software supplied herewith by Microchip Technology Incorporated
- * (the “Company”) for its PIC32MX Microcontroller is intended
- * and supplied to you, the Company’s customer, for use solely and
+ * (the ï¿½Companyï¿½) for its PIC32MX Microcontroller is intended
+ * and supplied to you, the Companyï¿½s customer, for use solely and
  * exclusively on Microchip Microcontroller products.
  * The software is owned by the Company and/or its supplier, and is
  * protected under applicable copyright laws. All rights are reserved.
@@ -25,7 +25,7 @@
  * civil liability for the breach of the terms and conditions of this
  * license.
  *
- * THIS SOFTWARE IS PROVIDED IN AN “AS IS” CONDITION. NO WARRANTIES,
+ * THIS SOFTWARE IS PROVIDED IN AN ï¿½AS ISï¿½ CONDITION. NO WARRANTIES,
  * WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING, BUT NOT LIMITED
  * TO, IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A
  * PARTICULAR PURPOSE APPLY TO THIS SOFTWARE. THE COMPANY SHALL NOT,
@@ -36,7 +36,8 @@
  * $Id$
  *
  ********************************************************************/
-#include <mchp_dsp_wrapper.h>
+#include "../../include/mchp_dsp_wrapper.h"
+#include "../../include/dsplib_dsp.h"
 
 /*********************************************************************
  * Function:        fractcomplex16* FFTComplex16 (int log2N,fractcomplex16* dstCV,fractcomplex16* srcCV,fractcomplex16* twidFactors,int factPage)
@@ -66,7 +67,7 @@ fractcomplex16* FFTComplex16 (int log2N,fractcomplex16* dstCV,fractcomplex16* sr
 
     fractcomplex16 scratch[N];
 
-    mips_fft16(dstCV, srcCV, twidFactors, scratch, log2N);
+    mips_fft16((int16c *) dstCV, (int16c *) srcCV, (int16c *) twidFactors, (int16c *) scratch, log2N);
     
     return(dstCV);
 }

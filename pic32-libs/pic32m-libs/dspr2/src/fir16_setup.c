@@ -44,7 +44,7 @@
  * *******************************End Copyright************************************
  */
 
-#include "dsplib_dsp.h"
+#include "../../include/dsplib_dsp.h"
 
 
 void mips_fir16_setup(int16 *coeffs2x, int16 *coeffs, int K)

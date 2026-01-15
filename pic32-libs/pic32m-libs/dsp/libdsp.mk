@@ -15,7 +15,7 @@ CPPFLAGS	=-I$(INCDESTDIR)
 # But this library aliases all over the place, so switch off
 # strict aliasing rules	
 OPTIM = -Os -fno-strict-aliasing -fno-optimize-sibling-calls
-PLATFORM += -minterlink-mips16 -mno-mips16
+PLATFORM += -mdspr2 -mno-mips16
 
 libdsp.a: $(LIBOBJ)
 	$(STRIP) $(STRIPFLAGS) $(LIBOBJ)

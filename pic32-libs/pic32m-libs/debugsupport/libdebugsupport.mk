@@ -12,7 +12,7 @@ vpath	%.S		$(_VPATH)
 vpath	%.h		$(_VPATH)
 vpath	Makefile	$(_VPATH)
 
-PLATFORM += -minterlink-mips16
+PLATFORM += -mdspr2
 CPPFLAGS = -I$(ROOT)/include -I$(ROOT)/../include -D__LIBBUILD__ -I$(INCDESTDIR)
 
 # Optimise math library for speed, not size

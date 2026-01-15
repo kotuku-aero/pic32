@@ -44,7 +44,7 @@
  * *******************************End Copyright************************************
  */
 
-#include "dsplib_dsp.h"
+#include "../../include/dsplib_dsp.h"
 
 
 void mips_iir16_setup(int16 *coeffs, biquad16 *bq, int B)

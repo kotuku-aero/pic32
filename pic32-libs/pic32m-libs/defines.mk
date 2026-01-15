@@ -1,5 +1,5 @@
-PREFIX=pic32m
-TARGET=pic32m
+PREFIX=mips-elf
+TARGET=mips-elf
 AS	=$(PREFIX)-as
 AR	=$(PREFIX)-ar
 CC	=$(PREFIX)-gcc
@@ -12,9 +12,10 @@ SKIPARCHS=none
 GPOPT	= -G0
 
 # Minimal backtrace debug info, no assertion checking
-DEBUG	= -g -fvar-tracking -fframe-base-loclist
+DEBUG	= -g -fvar-tracking
 ASSERT	= -DNDEBUG=1
-PLATFORM = -ffreestanding -ffunction-sections -minterlink-compressed -mchp-stack-usage
+ARCH_FLAGS = -march=m14k -msoft-float
+PLATFORM = -ffreestanding -ffunction-sections $(ARCH_FLAGS)
 CFLAGS	= $(VAR) $(OPTIM) $(GPOPT) $(DEBUG) $(ASSERT) $(EXCEPT) $(PLATFORM)
 ASFLAGS	= $(VAR) $(GPOPT) $(ASSERT) $(EXCEPT) $(PLATFORM)
 STRIPFLAGS =-X

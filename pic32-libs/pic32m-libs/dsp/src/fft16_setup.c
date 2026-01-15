@@ -45,7 +45,7 @@
  */
 
 #include <math.h>
-#include "dsplib_dsp.h"
+#include "../../include/dsplib_dsp.h"
 
 
 void mips_fft16_setup(int16c *twiddles, int log2N)

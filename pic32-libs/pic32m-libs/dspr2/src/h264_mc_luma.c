@@ -44,9 +44,8 @@
  * *******************************End Copyright************************************
  */
 
-#include "dsplib_def.h" 
-
-#include "mips_unaligned.h"
+#include "../../include/dsplib_def.h"
+#include "../../include/mips_unaligned.h"
 
 
 #if __GNUC__ >= 4
