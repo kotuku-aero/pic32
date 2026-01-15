@@ -39,7 +39,7 @@
  */
 
 
-#include <xc.h>
+/* #include <xc.h> */ /* Removed - not needed for generic build */
 
 extern void __attribute__((nomips16, noreturn, far, weak)) __pic32_software_reset();
 void __attribute__((weak)) __exception_handler_break(void);

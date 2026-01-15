@@ -9,10 +9,10 @@
  * coprocessor registers.
  */
 	
-#include <xc.h>
 #include <sys/asm.h>
 
 	.set	nomips16
+	.set	mips32r2
 
 /* unsigned _xxc0 (unsigned reg, unsigned clear, unsigned set) 
       cp0reg[REG] = (cp0reg[REG] & ~CLEAR) | SET

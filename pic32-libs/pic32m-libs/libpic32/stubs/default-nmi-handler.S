@@ -33,7 +33,7 @@
  *
  ********************************************************************/
 
-#include <xc.h>
+/* #include <xc.h> */ /* Removed - not needed for generic build */
 #ifdef __LIBBUILD__
 	.file 1 "Microchip PIC32 Library"
 	.loc 1 0
@@ -44,16 +44,16 @@
 	.set	nomips16
 	.ent	_nmi_handler
 _nmi_handler:
-	.frame	sp,0,$31		# vars= 0, regs= 0/0, args= 0, gp= 0
+	.frame	$29,0,$31		# vars= 0, regs= 0/0, args= 0, gp= 0
 	.mask	0x00000000,0
 	.fmask	0x00000000,0
 	.set	noreorder
-	
-        mfc0    k0, _CP0_STATUS                   # retrieve STATUS
-        lui     k1, ~(_CP0_STATUS_BEV_MASK >> 16) & 0xffff
-        ori     k1, k1, ~_CP0_STATUS_BEV_MASK & 0xffff
-        and     k0, k0, k1                        # Clear BEV
-        mtc0    k0, _CP0_STATUS                   # store STATUS
+
+        mfc0    $26, $12, 0                       # k0 = STATUS (CP0 reg 12, sel 0)
+        lui     $27, 0xffbf                       # k1 = ~(0x00400000 >> 16) = 0xffbf
+        ori     $27, $27, 0xffff                  # k1 |= 0xffff
+        and     $26, $26, $27                     # k0 &= k1 (Clear BEV bit 22)
+        mtc0    $26, $12, 0                       # STATUS = k0
         eret
 
 	.set	macro

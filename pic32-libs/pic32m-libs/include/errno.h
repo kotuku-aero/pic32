@@ -11,7 +11,7 @@
 extern "C" {
 #endif
 
-#include <sys/errno.h>
+#include "sys/errno.h"
 
 #if defined(__XC32__)
 extern __attribute__((section(".bss.errno"))) int errno;

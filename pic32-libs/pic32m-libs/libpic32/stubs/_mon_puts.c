@@ -35,6 +35,7 @@
  *
  */
 
+extern void _mon_putc (char c);
 /* Outputs a string using _mon_putc */
 void __attribute__((weak))
 _mon_puts (const char * s)

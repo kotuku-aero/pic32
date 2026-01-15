@@ -10,10 +10,11 @@
  * coprocessor registers.
  */
 	
-#include <xc.h>
+#include <cp0defs.h>
 #include <sys/asm.h>
 
 	.set	nomips16
+	.set	mips32r2
 	
 /* unsigned _xchsrspss (unsigned set) 
       SRSCTL<PSS> = SET
@@ -22,12 +23,12 @@
 
 LEAF(_xchsrspss)
 	.set noreorder
-	mfc0	t0,_CP0_SRSCTL
-	ext	v0,t0,_CP0_SRSCTL_PSS_POSITION,_CP0_SRSCTL_PSS_LENGTH
-	ins	t0,a0,_CP0_SRSCTL_PSS_POSITION,_CP0_SRSCTL_PSS_LENGTH
-	mtc0	t0,_CP0_SRSCTL
-	jr.hb	ra
-	ehb	
+	mfc0	$8,$12,2	/* t0 = SRSCTL (CP0 reg 12, sel 2) */
+	ext	$2,$8,6,4	/* v0 = extract PSS field (bits 6-9) */
+	ins	$8,$4,6,4	/* insert a0 into t0 PSS field */
+	mtc0	$8,$12,2	/* SRSCTL = t0 */
+	jr.hb	$31		/* return with hazard barrier */
+	 ehb			/* execution hazard barrier (delay slot) */	
 	.set reorder
 END(_xchsrspss)
 

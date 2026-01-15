@@ -1,5 +1,5 @@
 
-	.section	.text,code
+	.section	.text
 	.align	2
 	.globl	__pic32_software_reset
 
@@ -17,7 +17,7 @@
 
 __pic32_software_reset:
 
-	.frame	$sp,24,$31
+	.frame	$sp,24,$ra
 	.mask	0x80000000,-4
 	.fmask	0x00000000,0
 	.set	noreorder

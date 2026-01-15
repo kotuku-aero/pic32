@@ -1,5 +1,6 @@
-## How to build the pic libraries using mips-elf
-#! /bin/base
+#! /bin/bash
+
+export PATH=/c/pic32/bin:$PATH
 
 mkdir -p build
 cd build

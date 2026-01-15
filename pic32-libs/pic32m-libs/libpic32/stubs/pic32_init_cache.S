@@ -34,7 +34,7 @@
  *
  *-------------------------------------------------------------------------*/
 
-#include <xc.h>
+/* #include <xc.h> */ /* Removed - not needed for generic build */
 #include <cp0defs.h>
 
         /* Symbols defined in linker script */
@@ -62,15 +62,15 @@
 #define Index_Store_Tag_I 0x08
 #define Index_Store_Tag_D 0x09
 
-#define tmp t0
-#define cfg t1
-#define icachesize t2
-#define ilinesize t3
-#define iways t4
-#define dcachesize t5
-#define dlinesize t6
-#define dways t7
-#define save_ra v1
+#define tmp $t0
+#define cfg $t1
+#define icachesize $t2
+#define ilinesize $t3
+#define iways $t4
+#define dcachesize $t5
+#define dlinesize $t6
+#define dways $t7
+#define save_ra $v1
 
 #define INIT_L1_CACHE
 #if defined(INIT_L1_CACHE)
@@ -86,7 +86,7 @@
 .sdata; .globl __pic32_scache_linesize; .type __pic32_scache_linesize,@object; .size __pic32_scache_linesize,4; __pic32_scache_linesize:; .word -1
 .sdata; .globl __pic32_scache_ways; .type __pic32_scache_ways,@object; .size __pic32_scache_ways,4; __pic32_scache_ways:; .word 1
 
-.section .cache_init.cache, code
+.section .cache_init.cache
         .set nomips16
         .ent __size_cache; __size_cache:
         mfc0 cfg,_CP0_CONFIG
@@ -151,7 +151,7 @@
 #undef tmp
 
 8:
-9:   j ra
+9:   j $ra
      nop
     .size __size_cache,.-__size_cache; .end __size_cache;
 
@@ -160,17 +160,17 @@
  *
  * Work out size of I & D caches (assume already initialized)
  */
-        .section .cache_init.pic32_size_cache, code
+        .section .cache_init.pic32_size_cache
         .set nomips16
         .globl __pic32_size_cache; .ent __pic32_size_cache;
 
 __pic32_size_cache:
-        lw t0,__pic32_icache_size
-        move a3,ra
-        bgtz t0,8f # already known?
+        lw $t0,__pic32_icache_size
+        move $a3,$ra
+        bgtz $t0,8f # already known?
 
         bal __size_cache
-        move ra,a3
+        move $ra,$a3
 
 ..savesize:
         sw icachesize,__pic32_icache_size
@@ -180,7 +180,7 @@ __pic32_size_cache:
         sw iways,__pic32_icache_ways
         sw dways,__pic32_dcache_ways
 
-8:      j ra
+8:      j $ra
         nop
         .size __pic32_size_cache,.-__pic32_size_cache; .end __pic32_size_cache
 
@@ -189,22 +189,22 @@ __pic32_size_cache:
  *
  * Work out size and initialize I & D caches.
  */
-        .section .cache_init.pic32_init_cache, code
+        .section .cache_init.pic32_init_cache
         .set nomips16
         .globl __pic32_init_cache; .ent __pic32_init_cache;
 __pic32_init_cache:
 
         /* If the cache is enabled, then return. */
-        mfc0 t0,_CP0_CONFIG          # Load the Config register
-        li t1,_CP0_CONFIG_K0_MASK    # Load the K0 mask
-        and t1,t0                    # Get the K0 bits of the Config register
-        xori t1,_CACHE_DISABLE       # Check if equal to the disable value
-        beqz t1,1f                   # If 0, then disabled. Jump over and continue
+        mfc0 $t0,_CP0_CONFIG          # Load the Config register
+        li $t1,_CP0_CONFIG_K0_MASK    # Load the K0 mask
+        and $t1,$t0                    # Get the K0 bits of the Config register
+        xori $t1,_CACHE_DISABLE       # Check if equal to the disable value
+        beqz $t1,1f                   # If 0, then disabled. Jump over and continue
         nop
-        jr ra                        # If not 0, return.
+        jr $ra                        # If not 0, return.
         nop
 
-1:      move save_ra,ra
+1:      move save_ra,$ra
         bal __size_cache
 
         /* Run uncached */
@@ -230,42 +230,42 @@ __pic32_init_cache:
         .set noreorder
         # Disable interrupts and set UM=1
         # Save current status in tmp
-        mfc0 t0,_CP0_STATUS
-        li t1,~_CP0_STATUS_IE_MASK
-        and t1,t0
-        or t1,_CP0_STATUS_ERL_MASK
-        mtc0 t1,_CP0_STATUS
+        mfc0 $t0,_CP0_STATUS
+        li $t1,~_CP0_STATUS_IE_MASK
+        and $t1,$t0
+        or $t1,_CP0_STATUS_ERL_MASK
+        mtc0 $t1,_CP0_STATUS
         ehb
 
-        mtc0 zero,_CP0_ERRCTL
-        mtc0 zero,_CP0_TAGLO # 4K taglo / 2*K itaglo
+        mtc0 $zero,_CP0_ERRCTL
+        mtc0 $zero,_CP0_TAGLO # 4K taglo / 2*K itaglo
         ehb
 
         /* Initialize primary instruction cache */
         .set noreorder
-4:      la a0,__pic32_init_cache_program_base_addr
-        bne a0,zero,0f
+4:      la $a0,__pic32_init_cache_program_base_addr
+        bne $a0,$zero,0f
         /* Use a default if the symbol is not defined */
-        li a0,0x9D000000 /* KSEG0_PROGRAM_BASE */
+        li $a0,0x9D000000 /* KSEG0_PROGRAM_BASE */
 0:      beqz icachesize,8f    # icachesize
-        addu a1,a0,icachesize # limit = base + icachesize
-1:      addu a0,ilinesize  # line size
-        bne a0,a1,1b
-        cache Index_Store_Tag_I,-4(a0) # BDSLOT: clear tag
+        addu $a1,$a0,icachesize # limit = base + icachesize
+1:      addu $a0,ilinesize  # line size
+        bne $a0,$a1,1b
+        cache Index_Store_Tag_I,-4($a0) # BDSLOT: clear tag
 
 
         /* Initialize primary data cache */
         .set noreorder
-8:      la a0,__pic32_init_cache_data_base_addr
-        bne a0,zero,0f
+8:      la $a0,__pic32_init_cache_data_base_addr
+        bne $a0,$zero,0f
         /* Use a default if the symbol is not defined */
-        li a0,0x80000000  /* KSEG_DATA_BASE */
+        li $a0,0x80000000  /* KSEG_DATA_BASE */
 
 0:      beqz dcachesize,8f
-        addu a1,a0,dcachesize # limit = base + dcachesize
-1:      addu a0,dlinesize
-        bne a0,a1,1b
-        cache Index_Store_Tag_D,-4(a0) # BDSLOT: clear tag
+        addu $a1,$a0,dcachesize # limit = base + dcachesize
+1:      addu $a0,dlinesize
+        bne $a0,$a1,1b
+        cache Index_Store_Tag_D,-4($a0) # BDSLOT: clear tag
 
         .set reorder
 
@@ -282,21 +282,21 @@ __pic32_init_cache:
         .set noreorder
 
         # restore status
-        mtc0 t0,_CP0_STATUS
+        mtc0 $t0,_CP0_STATUS
         ehb
 
         # Configure Cache Mode
-        mfc0 t1, _CP0_CONFIG
-        ori t1, _CP0_CONFIG_K0_MASK
-        xori t1, _CP0_CONFIG_K0_MASK
-        ori t1, __PIC32_CACHE_MODE
-        mtc0 t1, _CP0_CONFIG
+        mfc0 $t1, _CP0_CONFIG
+        ori $t1, _CP0_CONFIG_K0_MASK
+        xori $t1, _CP0_CONFIG_K0_MASK
+        ori $t1, __PIC32_CACHE_MODE
+        mtc0 $t1, _CP0_CONFIG
         ehb
-        
+
          .set reorder
 
-        move ra, save_ra
-        jr ra
+        move $ra, save_ra
+        jr $ra
         nop
         .size __pic32_init_cache,.-__pic32_init_cache; .end __pic32_init_cache;
 #endif /* INIT_L1_CACHE */

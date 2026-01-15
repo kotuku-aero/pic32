@@ -1,6 +1,6 @@
 include $(SDEMAKECONFIG)
 
-CDEBUGFLAGS=-g1 -fframe-base-loclist
+CDEBUGFLAGS=-g1
 CFLAGS=$(CDEBUGFLAGS)
 
 SRCS=setjmp.S libgcc2.c

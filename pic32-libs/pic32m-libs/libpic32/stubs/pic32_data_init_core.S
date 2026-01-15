@@ -33,12 +33,12 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *-------------------------------------------------------------------------*/        
-#include <xc.h>
+/* #include <xc.h> */ /* Removed - not needed for generic build */
 #include <cp0defs.h>
 
         .weak _dinit_addr
 
-        .section        .text,code
+        .section        .text
         .align          2
         .local  __dummy_decode_dinit
         .set nomips16
@@ -52,7 +52,7 @@
 __dummy_decode_dinit:
         .set    noreorder
         .set    nomacro
-        jr       $31
+        jr       $ra
         nop
         .end    __dummy_decode_dinit
 .LFE0:
@@ -68,7 +68,7 @@ __dummy_decode_dinit:
         .weak   __dinit_decompress
         __dinit_decompress      = __dummy_decode_dinit
 
-        .section	.rodata,code
+        .section	.rodata
         .align	2
         .type	_dinit_func_table, @object
         .size	_dinit_func_table, 20
@@ -79,9 +79,9 @@ _dinit_func_table:
         .word	__dinit_copy_val_data
         .word	__dinit_decompress
 
-#define save_ra v1
+#define save_ra $v1
 
-        .section	.text,code
+        .section	.text
         .align  	2
         .globl	__pic32_data_init
 
@@ -99,7 +99,7 @@ _dinit_func_table:
         .type	__pic32_data_init, @function
 
 __pic32_data_init:
-        move save_ra,ra
+        move save_ra,$ra
 
 #define INIT_DATA
 #if defined(INIT_DATA)
@@ -112,12 +112,12 @@ __pic32_data_init:
         .equiv FMT_COPY_VAL_DATA,3
         .equiv FMT_COMPRESSED,4
 _dinit_init:
-        la      a0,_dinit_addr
+        la      $a0,_dinit_addr
 
-#define SRC a0
-#define DST a1
-#define LEN a2
-#define FMT t3
+#define SRC $a0
+#define DST $a1
+#define LEN $a2
+#define FMT $t3
         beq     SRC,$0,9f
         nop
 0:      lw      DST,0(SRC)
@@ -129,16 +129,16 @@ _dinit_init:
 
         addu    SRC,4
 
-        lui	t4,%hi(_dinit_func_table)
-        addiu	t4,t4,%lo(_dinit_func_table)
-        sll	FMT,FMT, 2	
-        addu	t4,FMT,t4	
-        lw	t4,0(t4)	
+        lui	$t4,%hi(_dinit_func_table)
+        addiu	$t4,$t4,%lo(_dinit_func_table)
+        sll	FMT,FMT, 2
+        addu	$t4,FMT,$t4
+        lw	$t4,0($t4)
 
-        jalr t4
+        jalr $t4
         nop
 
-        move    SRC, v0
+        move    SRC, $v0
 
         addu    SRC,3
         addiu   LEN,$0,-4
@@ -148,8 +148,8 @@ _dinit_init:
         nop
 9:
 #endif
-        move ra, save_ra
-        jr ra
+        move $ra, save_ra
+        jr $ra
         nop
         .set	macro
         .set	reorder

@@ -35,6 +35,8 @@
  *
  */
 
+extern void _mon_putc (char c);
+
 /* Outputs count bytes of a string using _mon_putc */
 void __attribute__((weak))
 _mon_write (const char * s, unsigned int count)

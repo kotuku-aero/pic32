@@ -105,7 +105,7 @@ BMXDUPBA = 0xBF882030
 
   .extern _general_exception_handler
 
-  .section .text.general_exception, code
+  .section .text.general_exception
   .set noreorder
   .set noat
   .set nomips16

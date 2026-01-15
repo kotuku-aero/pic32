@@ -33,7 +33,7 @@
  * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *-------------------------------------------------------------------------*/
-#include <xc.h>
+/* #include <xc.h> */ /* Removed - not needed for generic build */
 #define save_ra v1
 
     /* ISA mode selection */

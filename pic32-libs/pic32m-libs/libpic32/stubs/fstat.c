@@ -35,7 +35,7 @@
  * Stub version of fstat.
  */
 
-#include <errno.h>
+#include "../../include/errno.h"
 #undef errno
 extern int errno;
 

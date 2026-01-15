@@ -18,9 +18,9 @@ OPTIM	=-O2 -fno-inline-functions -fno-unroll-loops \
 	 -foptimize-sibling-calls -ffunction-sections \
 	 -fno-common -fno-builtin-exit -fno-builtin-abort -mdspr2 \
 	 -fno-jump-tables
-PLATFORM += -fframe-base-loclist -Wcast-align -Wall
+PLATFORM += -Wcast-align -Wall
 
-CPPFLAGS = -DNDEBUG=1 -D__LIBBUILD__ -I$(ROOT)/include -I$(ROOT)/../include
+CPPFLAGS = -DNDEBUG=1 -D__LIBBUILD__ -I$(ROOT)/include -idirafter$(ROOT)/../include -I$(ROOT)/../../../atom
 
 all: libpic32.a startup_modules
 

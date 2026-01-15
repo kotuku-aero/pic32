@@ -20,6 +20,10 @@ CPPFLAGS = -I$(ROOT)/include -I$(ROOT)/../include -D__LIBBUILD__ -D__DEBUG -I$(I
 OPTIM = -O2 -fno-strict-aliasing -fno-optimize-sibling-calls
 PLATFORM += -fdata-sections
 
+# Explicit rules to ensure proper compilation with CC
+%.o: %.c
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
+
 all: libcppcfl.a
 
 libcppcfl.a: $(SUPOBJ)

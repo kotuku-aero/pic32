@@ -9,15 +9,15 @@ SKIPARCHS=none
 
 #EXCEPT	=-fexceptions
 
-GPOPT	= -G0
+GPOPT	= -mno-gpopt -mexplicit-relocs
 
 # Minimal backtrace debug info, no assertion checking
 DEBUG	= -g -fvar-tracking
 ASSERT	= -DNDEBUG=1
 ARCH_FLAGS = -march=m14k -msoft-float
-PLATFORM = -ffreestanding -ffunction-sections $(ARCH_FLAGS)
+PLATFORM = -ffreestanding -ffunction-sections $(ARCH_FLAGS)  -D_GNU_SOURCE -v
 CFLAGS	= $(VAR) $(OPTIM) $(GPOPT) $(DEBUG) $(ASSERT) $(EXCEPT) $(PLATFORM)
-ASFLAGS	= $(VAR) $(GPOPT) $(ASSERT) $(EXCEPT) $(PLATFORM)
+ASFLAGS	= $(VAR) $(ASSERT) $(EXCEPT) $(PLATFORM)
 STRIPFLAGS =-X
 ARCH	=mips
 
