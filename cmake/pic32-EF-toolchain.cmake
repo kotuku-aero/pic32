@@ -71,11 +71,11 @@ if(DFP_PATH AND EXISTS "${DFP_PATH}/include")
     message(STATUS "DFP include path: ${DFP_INCLUDE_PATH}")
 endif()
 
-# Set atom platform include path (for atom_pic32.h, etc.)
-set(ATOM_INCLUDE_PATH "")
-if(EXISTS "${TOOLCHAIN_PATH}/atom")
-    set(ATOM_INCLUDE_PATH "${TOOLCHAIN_PATH}/atom")
-    message(STATUS "Atom include path: ${ATOM_INCLUDE_PATH}")
+# New - PIC32-specific headers in toolchain
+set(PIC32_PLATFORM_INCLUDE_PATH "")
+if(EXISTS "${TOOLCHAIN_PATH}/mips-elf/include/pic32")
+    set(PIC32_PLATFORM_INCLUDE_PATH "${TOOLCHAIN_PATH}/mips-elf/include/pic32")
+    message(STATUS "PIC32 platform include path: ${PIC32_PLATFORM_INCLUDE_PATH}")
 endif()
 
 # ============================================================================
