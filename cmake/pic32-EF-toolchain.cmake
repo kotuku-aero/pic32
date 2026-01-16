@@ -127,7 +127,7 @@ set(CMAKE_CXX_COMPILER_WORKS 1)
 set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
 # C Flags - include atom and DFP paths
-set(CMAKE_C_FLAGS_INIT "${PIC32_CPU_FLAGS}${PIC32_INCLUDE_FLAGS} ${PIC32_WARN_FLAGS} -G0")
+set(CMAKE_C_FLAGS_INIT "${PIC32_CPU_FLAGS} ${PIC32_INCLUDE_FLAGS} ${PIC32_WARN_FLAGS} -G0")
 set(CMAKE_C_FLAGS_DEBUG_INIT "-Og -g3 -DDEBUG")
 set(CMAKE_C_FLAGS_RELEASE_INIT "-O2 -DNDEBUG")
 set(CMAKE_C_FLAGS_MINSIZEREL_INIT "-Os -DNDEBUG")
@@ -141,16 +141,17 @@ set(CMAKE_CXX_FLAGS_MINSIZEREL_INIT "-Os -DNDEBUG")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO_INIT "-O2 -g -DNDEBUG")
 
 # ASM Flags
-set(CMAKE_ASM_FLAGS_INIT "${PIC32_CPU_FLAGS}")
+set(CMAKE_ASM_FLAGS_INIT "${PIC32_CPU_FLAGS} ${PIC32_INCLUDE_FLAGS}")
 
 # ============================================================================
 # Linker Flags
 # ============================================================================
 
 # Base linker flags
-set(PIC32_LINKER_FLAGS "-nostartfiles -Wl,--gc-sections")
+set(PIC32_LINKER_FLAGS "-nostartfiles -Wl,--gc-sections -L${TOOLCHAIN_PATH}/mips-elf/lib/el/mfp64")
 # -nostartfiles = We provide our own crt0.S
 # --gc-sections = Remove unused code/data sections
+# -L...mfp64 = Use libraries compiled with -mfp64 (hard float, 64-bit FPU registers)
 
 # Float printf support (optional - adds ~10-15KB)
 # With hardware FPU you likely want this enabled
@@ -161,6 +162,8 @@ set(PIC32_LINKER_FLAGS "${PIC32_LINKER_FLAGS} -u _printf_float")
 # set(PIC32_LINKER_FLAGS "${PIC32_LINKER_FLAGS} -u _scanf_float")
 
 set(CMAKE_EXE_LINKER_FLAGS_INIT "${PIC32_CPU_FLAGS} ${PIC32_LINKER_FLAGS}")
+set(CMAKE_SHARED_LINKER_FLAGS_INIT "${PIC32_CPU_FLAGS} ${PIC32_LINKER_FLAGS}")
+set(CMAKE_MODULE_LINKER_FLAGS_INIT "${PIC32_CPU_FLAGS} ${PIC32_LINKER_FLAGS}")
 
 # ============================================================================
 # Search Paths
