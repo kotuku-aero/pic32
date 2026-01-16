@@ -18,7 +18,19 @@
 // the -D__PIC32MZ2048EFH064__ is not in the project makefile
 
 // only works if the include path to the archiecture is set.
+
+#ifdef DEBUG
+#undef DEBUG
+#define DEBUG_HIDDEN
+#endif
+
 #include <xc.h>
+
+#ifdef DEBUG_HIDDEN
+#define DEBUG
+#undef DEBUG_HIDDEN
+#endif
+
 #endif
 
 #ifdef RESTART_DEBUG

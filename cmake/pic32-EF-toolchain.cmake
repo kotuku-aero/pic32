@@ -113,6 +113,9 @@ endif()
 if(DFP_INCLUDE_PATH)
     set(PIC32_INCLUDE_FLAGS "${PIC32_INCLUDE_FLAGS} -I${DFP_INCLUDE_PATH}")
 endif()
+if(PIC32_PLATFORM_INCLUDE_PATH)
+    set(PIC32_INCLUDE_FLAGS "${PIC32_INCLUDE_FLAGS} -I${PIC32_PLATFORM_INCLUDE_PATH}")
+endif()
 
 # ============================================================================
 # Compiler Flags
