@@ -20,3 +20,5 @@
 !/mips-elf/lib/libpic32.a
 !/mips-elf/lib/libdsp*.a
 !/mips-elf/lib/libmips-semihost.a
+/pic32
+/README.txt
