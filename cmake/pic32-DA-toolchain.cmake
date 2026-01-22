@@ -1,6 +1,6 @@
 # PIC32MZ-DA Cross-Compilation Toolchain File (No FPU - Soft Float)
-# For use with custom mips-elf-gcc toolchain
-# Use with: cmake -DCMAKE_TOOLCHAIN_FILE=pic32-DA-toolchain.cmake
+# For use with custom pic32-gcc toolchain
+# Use with: cmake -DCMAKE_TOOLCHAIN_FILE=-DA-toolchain.cmake
 
 cmake_minimum_required(VERSION 3.16)
 
@@ -16,16 +16,16 @@ set(CMAKE_CXX_COMPILER_VERSION "15.2.0")
 # Toolchain Paths
 # ============================================================================
 
-# Custom mips-elf-gcc toolchain location
+# Custom pic32-gcc toolchain location
 if(WIN32)
-    set(TOOLCHAIN_PATH "C:/pic32" CACHE PATH "Path to mips-elf toolchain")
+    set(TOOLCHAIN_PATH "C:/pic32" CACHE PATH "Path to pic32 toolchain")
     set(TOOLCHAIN_EXT ".exe")
 else()
-    set(TOOLCHAIN_PATH "/opt/pic32" CACHE PATH "Path to mips-elf toolchain")
+    set(TOOLCHAIN_PATH "/opt/pic32" CACHE PATH "Path to pic32 toolchain")
     set(TOOLCHAIN_EXT "")
 endif()
 
-set(TOOLCHAIN_PREFIX "mips-elf-")
+set(TOOLCHAIN_PREFIX "mipsisa32r2-elf-")
 
 # Compilers - use explicit extension since CMAKE_EXECUTABLE_SUFFIX isn't set yet
 set(CMAKE_C_COMPILER "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}gcc${TOOLCHAIN_EXT}")
@@ -73,8 +73,8 @@ if(DFP_PATH AND EXISTS "${DFP_PATH}/include")
 
 # New - PIC32-specific headers in toolchain
 set(PIC32_PLATFORM_INCLUDE_PATH "")
-if(EXISTS "${TOOLCHAIN_PATH}/mips-elf/include/pic32")
-    set(PIC32_PLATFORM_INCLUDE_PATH "${TOOLCHAIN_PATH}/mips-elf/include/pic32")
+if(EXISTS "${TOOLCHAIN_PATH}/pic32/include/")
+    set(PIC32_PLATFORM_INCLUDE_PATH "${TOOLCHAIN_PATH}/pic32/include/")
     message(STATUS "PIC32 platform include path: ${PIC32_PLATFORM_INCLUDE_PATH}")
 endif()
 
@@ -83,7 +83,7 @@ endif()
 # ============================================================================
 
 # Architecture: microAptiv core, MIPS32r2, NO hardware FPU
-set(PIC32_ARCH_FLAGS "-march=m14k -msoft-float")
+set(PIC32_ARCH_FLAGS "-march=mips32r2 -EL -msoft-float ")
 
 # Additional MIPS flags
 set(PIC32_MIPS_FLAGS "-mno-mips16 -mno-micromips -EL")
@@ -122,16 +122,16 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 # C Flags - include atom and DFP paths
 set(CMAKE_C_FLAGS_INIT "${PIC32_CPU_FLAGS} ${PIC32_INCLUDE_FLAGS} ${PIC32_WARN_FLAGS} -G0")
 set(CMAKE_C_FLAGS_DEBUG_INIT "-Og -g3 -DDEBUG")
-set(CMAKE_C_FLAGS_RELEASE_INIT "-O2 -DNDEBUG")
+set(CMAKE_C_FLAGS_RELEASE_INIT "-O3 -DNDEBUG")
 set(CMAKE_C_FLAGS_MINSIZEREL_INIT "-Os -DNDEBUG")
-set(CMAKE_C_FLAGS_RELWITHDEBINFO_INIT "-O2 -g -DNDEBUG")
+set(CMAKE_C_FLAGS_RELWITHDEBINFO_INIT "-O3 -g -DNDEBUG")
 
 # C++ Flags - include atom and DFP paths
 set(CMAKE_CXX_FLAGS_INIT "${PIC32_CPU_FLAGS}${PIC32_INCLUDE_FLAGS} ${PIC32_WARN_FLAGS} -fno-exceptions -fno-rtti")
 set(CMAKE_CXX_FLAGS_DEBUG_INIT "-Og -g3 -DDEBUG")
-set(CMAKE_CXX_FLAGS_RELEASE_INIT "-O2 -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE_INIT "-O3 -DNDEBUG")
 set(CMAKE_CXX_FLAGS_MINSIZEREL_INIT "-Os -DNDEBUG")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO_INIT "-O2 -g -DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELWITHDEBINFO_INIT "-O3 -g -DNDEBUG")
 
 # ASM Flags
 set(CMAKE_ASM_FLAGS_INIT "${PIC32_CPU_FLAGS} ${PIC32_INCLUDE_FLAGS}")
@@ -184,7 +184,7 @@ set(PIC32_TOOLCHAIN_PATH "${TOOLCHAIN_PATH}" CACHE PATH "Path to PIC32 toolchain
 # ============================================================================
 
 # Function to generate HEX file from ELF
-function(pic32_generate_hex TARGET)
+function(_generate_hex TARGET)
     add_custom_command(TARGET ${TARGET} POST_BUILD
             COMMAND ${CMAKE_OBJCOPY} -O ihex $<TARGET_FILE:${TARGET}> $<TARGET_FILE_DIR:${TARGET}>/${TARGET}.hex
             COMMENT "Generating HEX file: ${TARGET}.hex"
@@ -192,7 +192,7 @@ function(pic32_generate_hex TARGET)
 endfunction()
 
 # Function to generate BIN file from ELF
-function(pic32_generate_bin TARGET)
+function(_generate_bin TARGET)
     add_custom_command(TARGET ${TARGET} POST_BUILD
             COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${TARGET}> $<TARGET_FILE_DIR:${TARGET}>/${TARGET}.bin
             COMMENT "Generating BIN file: ${TARGET}.bin"
@@ -200,7 +200,7 @@ function(pic32_generate_bin TARGET)
 endfunction()
 
 # Function to print size information
-function(pic32_print_size TARGET)
+function(_print_size TARGET)
     add_custom_command(TARGET ${TARGET} POST_BUILD
             COMMAND ${CMAKE_SIZE} --format=berkeley $<TARGET_FILE:${TARGET}>
             COMMENT "Size of ${TARGET}:"
@@ -208,15 +208,15 @@ function(pic32_print_size TARGET)
 endfunction()
 
 # Convenience function to add all post-build steps
-function(pic32_firmware TARGET)
-    pic32_generate_hex(${TARGET})
-    pic32_generate_bin(${TARGET})
-    pic32_print_size(${TARGET})
+function(_firmware TARGET)
+    _generate_hex(${TARGET})
+    _generate_bin(${TARGET})
+    _print_size(${TARGET})
 endfunction()
 
 # Function to add PIC32 platform include directories to a target
-# Use this in your CMakeLists.txt: pic32_add_platform_includes(your_target)
-function(pic32_add_platform_includes TARGET)
+# Use this in your CMakeLists.txt: _add_platform_includes(your_target)
+function(_add_platform_includes TARGET)
     if(PIC32_ATOM_INCLUDE_PATH)
         target_include_directories(${TARGET} PUBLIC ${PIC32_ATOM_INCLUDE_PATH})
     endif()

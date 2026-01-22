@@ -22,3 +22,4 @@
 !/mips-elf/lib/libmips-semihost.a
 /pic32
 /README.txt
+/mipsisa32r2-elf

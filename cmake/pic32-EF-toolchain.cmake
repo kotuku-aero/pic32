@@ -1,5 +1,5 @@
 # PIC32MZ-EF Cross-Compilation Toolchain File (With FPU64 - Hard Float)
-# For use with custom mips-elf-gcc toolchain
+# For use with custom pic32-gcc toolchain
 # Use with: cmake -DCMAKE_TOOLCHAIN_FILE=pic32-EF-toolchain.cmake
 
 cmake_minimum_required(VERSION 3.16)
@@ -16,16 +16,16 @@ set(CMAKE_CXX_COMPILER_VERSION "15.2.0")
 # Toolchain Paths
 # ============================================================================
 
-# Custom mips-elf-gcc toolchain location
+# Custom pic32-gcc toolchain location
 if(WIN32)
-    set(TOOLCHAIN_PATH "C:/pic32" CACHE PATH "Path to mips-elf toolchain")
+    set(TOOLCHAIN_PATH "C:/pic32" CACHE PATH "Path to pic32 toolchain")
     set(TOOLCHAIN_EXT ".exe")
 else()
-    set(TOOLCHAIN_PATH "/opt/pic32" CACHE PATH "Path to mips-elf toolchain")
+    set(TOOLCHAIN_PATH "/opt/pic32" CACHE PATH "Path to pic32 toolchain")
     set(TOOLCHAIN_EXT "")
 endif()
 
-set(TOOLCHAIN_PREFIX "mips-elf-")
+set(TOOLCHAIN_PREFIX "mipsisa32r2-elf-")
 
 # Compilers - use explicit extension since CMAKE_EXECUTABLE_SUFFIX isn't set yet
 set(CMAKE_C_COMPILER "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}gcc${TOOLCHAIN_EXT}")
@@ -73,8 +73,8 @@ endif()
 
 # New - PIC32-specific headers in toolchain
 set(PIC32_PLATFORM_INCLUDE_PATH "")
-if(EXISTS "${TOOLCHAIN_PATH}/mips-elf/include/pic32")
-    set(PIC32_PLATFORM_INCLUDE_PATH "${TOOLCHAIN_PATH}/mips-elf/include/pic32")
+if(EXISTS "${TOOLCHAIN_PATH}/pic32/include/pic32")
+    set(PIC32_PLATFORM_INCLUDE_PATH "${TOOLCHAIN_PATH}/pic32/include/pic32")
     message(STATUS "PIC32 platform include path: ${PIC32_PLATFORM_INCLUDE_PATH}")
 endif()
 
@@ -83,7 +83,7 @@ endif()
 # ============================================================================
 
 # Architecture: microAptiv core, MIPS32r2, hardware FPU with 64-bit registers
-set(PIC32_ARCH_FLAGS "-march=m14k -mhard-float -mfp64")
+set(PIC32_ARCH_FLAGS "-march=mips32r2 -EL")
 # -mhard-float = Use hardware floating point instructions
 # -mfp64 = Use 64-bit FPU registers (required for PIC32MZ EF)
 
@@ -148,7 +148,7 @@ set(CMAKE_ASM_FLAGS_INIT "${PIC32_CPU_FLAGS} ${PIC32_INCLUDE_FLAGS}")
 # ============================================================================
 
 # Base linker flags
-set(PIC32_LINKER_FLAGS "-nostartfiles -Wl,--gc-sections -L${TOOLCHAIN_PATH}/mips-elf/lib/el/mfp64")
+set(PIC32_LINKER_FLAGS "-nostartfiles -Wl,--gc-sections -L${TOOLCHAIN_PATH}/pic32/lib/el/mfp64")
 # -nostartfiles = We provide our own crt0.S
 # --gc-sections = Remove unused code/data sections
 # -L...mfp64 = Use libraries compiled with -mfp64 (hard float, 64-bit FPU registers)
