@@ -48,7 +48,7 @@ endif()
 # ============================================================================
 
 # Determine expected DFP path based on processor family
-set(EXPECTED_DFP_PATH "${CMAKE_SOURCE_DIR}/dfp/PIC32MZ-${PIC32_FAMILY}")
+set(EXPECTED_DFP_PATH "${CMAKE_CURRENT_SOURCE_DIR}/dfp/PIC32MZ-${PIC32_FAMILY}")
 
 # Option to skip DFP check (for CI or special builds)
 option(PIC32_SKIP_DFP_CHECK "Skip DFP presence verification" OFF)
@@ -56,7 +56,7 @@ option(PIC32_SKIP_DFP_CHECK "Skip DFP presence verification" OFF)
 if(NOT PIC32_SKIP_DFP_CHECK)
     if(NOT EXISTS "${EXPECTED_DFP_PATH}/include/xc.h")
         # Check if get-dfp.sh exists
-        if(EXISTS "${CMAKE_SOURCE_DIR}/get-dfp.sh")
+        if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/get-dfp.sh")
             set(DFP_SCRIPT_MSG "Run: ./get-dfp.sh PIC32MZ-${PIC32_FAMILY}")
         else()
             set(DFP_SCRIPT_MSG "Ensure get-dfp.sh is present and run it")
@@ -104,18 +104,18 @@ find_program(BASH_EXECUTABLE
     DOC "Path to bash executable (MSYS2 or Git Bash on Windows)"
 )
 
-if(BASH_EXECUTABLE AND EXISTS "${CMAKE_SOURCE_DIR}/get-dfp.sh")
+if(BASH_EXECUTABLE AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/get-dfp.sh")
     # Add a target to fetch DFPs
     add_custom_target(fetch-dfp
-        COMMAND ${BASH_EXECUTABLE} "${CMAKE_SOURCE_DIR}/get-dfp.sh" "PIC32MZ-${PIC32_FAMILY}"
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        COMMAND ${BASH_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/get-dfp.sh" "PIC32MZ-${PIC32_FAMILY}"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
         COMMENT "Downloading and patching PIC32MZ-${PIC32_FAMILY} Device Family Pack..."
         VERBATIM
     )
     
     add_custom_target(fetch-dfp-all
-        COMMAND ${BASH_EXECUTABLE} "${CMAKE_SOURCE_DIR}/get-dfp.sh" "all"
-        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        COMMAND ${BASH_EXECUTABLE} "${CMAKE_CURRENT_SOURCE_DIR}/get-dfp.sh" "all"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
         COMMENT "Downloading and patching all Device Family Packs..."
         VERBATIM
     )

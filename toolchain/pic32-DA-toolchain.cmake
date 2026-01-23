@@ -45,13 +45,16 @@ set(CMAKE_NM "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}nm${TOOLCHAIN_EXT}" CACHE
 # ============================================================================
 
 # Try to find DFP
-if(EXISTS "${CMAKE_SOURCE_DIR}/mipsisa32r2/dfp/PIC32MZ-DA")
-    set(DFP_PATH "${CMAKE_SOURCE_DIR}/mipsisa32r2/dfp/PIC32MZ-DA")
-    message(STATUS "Using DFP from project: ${DFP_PATH}")
+if(EXISTS "${CMAKE_SOURCE_DIR}/pic32/dfp/PIC32MZ-DA")
+    set(DFP_PATH "${CMAKE_SOURCE_DIR}/pic32/dfp/PIC32MZ-DA")
+    message(STATUS "Using DFP: ${DFP_PATH}")
+elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/dfp/PIC32MZ-DA")
+    set(DFP_PATH "${CMAKE_CURRENT_SOURCE_DIR}/dfp/PIC32MZ-DA")
+    message(STATUS "Using DFP: ${DFP_PATH}")
 else()
-#    message(WARNING "PIC32MZ-DA DFP not found in expected locations!")
-#    message(WARNING "Build may fail without device-specific headers and linker scripts.")
-#    message(WARNING "run the get-dfp.sh all script in the mipsisa32r2 directory to get the dfp's")
+    #    message(WARNING "PIC32MZ-DA DFP not found in expected locations!")
+    #    message(WARNING "Build may fail without device-specific headers and linker scripts.")
+    #    message(WARNING "run the get-dfp.sh all script in the mipsisa32r2 directory to get the dfp's")
     set(DFP_PATH "")
 endif()
 
@@ -59,8 +62,8 @@ endif()
 set(DFP_INCLUDE_PATH "")
 if(DFP_PATH AND EXISTS "${DFP_PATH}/include")
     set(DFP_INCLUDE_PATH "${DFP_PATH}/include")
-        message(STATUS "DFP include path: ${DFP_INCLUDE_PATH}")
-    endif()
+    message(STATUS "DFP include path: ${DFP_INCLUDE_PATH}")
+endif()
 
 # ============================================================================
 # PIC32MZ-DA Specific Flags (No FPU - Soft Float)

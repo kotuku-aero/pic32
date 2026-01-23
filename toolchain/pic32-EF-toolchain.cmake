@@ -45,9 +45,12 @@ set(CMAKE_NM "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}nm${TOOLCHAIN_EXT}" CACHE
 # ============================================================================
 
 # Try to find DFP
-if(EXISTS "${CMAKE_SOURCE_DIR}/dfp/PIC32MZ-EF")
-    set(DFP_PATH "${CMAKE_SOURCE_DIR}/dfp/PIC32MZ-EF")
-    message(STATUS "Using DFP from project: ${DFP_PATH}")
+if(EXISTS "${CMAKE_SOURCE_DIR}/pic32/dfp/PIC32MZ-EF")
+    set(DFP_PATH "${CMAKE_SOURCE_DIR}/pic32/dfp/PIC32MZ-EF")
+    message(STATUS "Using DFP: ${DFP_PATH}")
+elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/dfp/PIC32MZ-EF")
+    set(DFP_PATH "${CMAKE_CURRENT_SOURCE_DIR}/dfp/PIC32MZ-EF")
+    message(STATUS "Using DFP: ${DFP_PATH}")
 else()
 #    message(WARNING "PIC32MZ-DA DFP not found in expected locations!")
 #    message(WARNING "Build may fail without device-specific headers and linker scripts.")
