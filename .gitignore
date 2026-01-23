@@ -3,22 +3,8 @@
 /libexec/
 /share/
 /dfp/
-/pic32-libs/pic32m-libs/build/
 /.idea/
 **/OBJ/*
 /downloads/
 /staging/
 
-# Ignore mips-elf except specific items
-/mips-elf/*
-!/mips-elf/include/
-/mips-elf/include/*
-!/mips-elf/include/pic32/
-!/mips-elf/lib/
-/mips-elf/lib/*
-!/mips-elf/lib/libpic32.a
-!/mips-elf/lib/libdsp*.a
-!/mips-elf/lib/libmips-semihost.a
-/pic32
-/README.txt
-/mipsisa32r2-elf
