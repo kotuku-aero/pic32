@@ -208,11 +208,6 @@ set(CPPCFL_HEADERS
     src/cppcfl/cpflp-internal.h
 )
 
-set(DEBUGSUPPORT_SOURCES
-        src/debugsupport/appio.c
-        src/debugsupport/db_utils.c
-)
-
 set(DEFAULTVECTORS_SOURCES
         src/default_vector_dispatch/defaultinterrupt.c
         src/default_vector_dispatch/vector0.S
@@ -618,7 +613,6 @@ set(STUBS_SOURCES
 set(LIBPIC32_SOURCES
         ${ARCH_SOURCES}
         ${CPPCFL_SOURCES}
-        ${DEBUGSUPPORT_SOURCES}
         ${DEFAULTVECTORS_SOURCES}
         ${DSP_SOURCES}
         ${DSPR2_SOURCES}

@@ -21,15 +21,15 @@ __function_level_profiling_long (void)
 {
   register unsigned int save_status;
 
-  asm volatile("di    %0" : "=r"(save_status));
-  asm volatile ("ehb");
+  __asm__ volatile("di    %0" : "=r"(save_status));
+  __asm__ volatile ("ehb");
   // wait for previous data capture to complete
   while (_CPSTAT & DATA_CAPTURE1_BUSY) ;
   
   __DCWord = (unsigned int)__builtin_return_address(0);
    
   if(save_status)
-    asm volatile("ei");
+    __asm__ volatile("ei");
 }
 
 void __attribute__((optimize("-Os"),nomips16,section(".libcppcfl")))
@@ -37,13 +37,13 @@ __function_level_profiling_long_zero (void)
 {
   register unsigned int save_status;
   
-  asm volatile("di    %0" : "=r"(save_status));
-  asm volatile ("ehb");
+  __asm__ volatile("di    %0" : "=r"(save_status));
+  __asm__ volatile ("ehb");
   // wait for previous data capture to complete
   while (_CPSTAT & DATA_CAPTURE1_BUSY) ;
   
   __DCWord = 0;
    
   if(save_status)
-    asm volatile("ei");
+    __asm__ volatile("ei");
 }
