@@ -62,13 +62,6 @@ if(DFP_PATH AND EXISTS "${DFP_PATH}/include")
     message(STATUS "DFP include path: ${DFP_INCLUDE_PATH}")
 endif()
 
-# New - PIC32-specific headers in toolchain
-set(PIC32_PLATFORM_INCLUDE_PATH "")
-if(EXISTS "${TOOLCHAIN_PATH}/pic32/include/pic32")
-    set(PIC32_PLATFORM_INCLUDE_PATH "${TOOLCHAIN_PATH}/pic32/include/pic32")
-    message(STATUS "PIC32 platform include path: ${PIC32_PLATFORM_INCLUDE_PATH}")
-endif()
-
 # ============================================================================
 # PIC32MZ-EF Specific Flags (With FPU64 - Hard Float)
 # ============================================================================

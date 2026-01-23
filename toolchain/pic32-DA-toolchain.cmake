@@ -62,13 +62,6 @@ if(DFP_PATH AND EXISTS "${DFP_PATH}/include")
         message(STATUS "DFP include path: ${DFP_INCLUDE_PATH}")
     endif()
 
-# New - PIC32-specific headers in toolchain
-set(PIC32_PLATFORM_INCLUDE_PATH "")
-if(EXISTS "${CMAKE_SOURCE_DIR}/mipsisa32r2/mips-elf/include/pic32/")
-    set(PIC32_PLATFORM_INCLUDE_PATH "${TOOLCHAIN_PATH}/pic32/include/")
-    message(STATUS "PIC32 platform include path: ${PIC32_PLATFORM_INCLUDE_PATH}")
-endif()
-
 # ============================================================================
 # PIC32MZ-DA Specific Flags (No FPU - Soft Float)
 # ============================================================================
