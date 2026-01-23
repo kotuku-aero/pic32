@@ -21,7 +21,7 @@
  *  C Runtime Startup
  *-------------------------------------------------------------------------*/
 
-#include "xc.h"
+#include <xc.h>
 #include <cp0defs.h>
 
 #if !defined(PIC32_SRS_SET_COUNT)

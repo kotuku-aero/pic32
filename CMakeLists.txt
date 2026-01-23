@@ -1,5 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
 
+set(CMAKE_C_COMPILER_WORKS 1)
+set(CMAKE_CXX_COMPILER_WORKS 1)
+
 # ============================================================================
 # PIC32 Support Library (libpic32)
 # ============================================================================
@@ -8,9 +11,21 @@ cmake_minimum_required(VERSION 3.20)
 #   - PIC32MZ-DA: Little-endian, soft-float
 #   - PIC32MZ-EF: Little-endian, hard-float (FPU64)
 #
+# Build type controlled by CMAKE_BUILD_TYPE:
+#   - Debug:   Optimized for debugging (-Og -g3)
+#   - Release: Optimized for size/speed (-O3)
+#
+# Prerequisites:
+#   Before building, run get-dfp.sh to download and patch Device Family Packs:
+#     ./get-dfp.sh all
+#
+#   On Windows (MSYS2 required):
+#     1. Install MSYS2 from https://www.msys2.org/
+#     2. In MSYS2 terminal: pacman -S wget unzip sed findutils
+#     3. Run: ./get-dfp.sh all
+#
 # Produces:
-#   - lib/libpic32.a         (Release build)
-#   - lib/libpic32_debug.a   (Debug build)
+#   - lib/libpic32.a
 # ============================================================================
 
 project(pic32_support
@@ -29,22 +44,103 @@ if(NOT PIC32_BUILD)
 endif()
 
 # ============================================================================
+# DFP (Device Family Pack) Verification
+# ============================================================================
+
+# Determine expected DFP path based on processor family
+set(EXPECTED_DFP_PATH "${CMAKE_SOURCE_DIR}/dfp/PIC32MZ-${PIC32_FAMILY}")
+
+# Option to skip DFP check (for CI or special builds)
+option(PIC32_SKIP_DFP_CHECK "Skip DFP presence verification" OFF)
+
+if(NOT PIC32_SKIP_DFP_CHECK)
+    if(NOT EXISTS "${EXPECTED_DFP_PATH}/include/xc.h")
+        # Check if get-dfp.sh exists
+        if(EXISTS "${CMAKE_SOURCE_DIR}/get-dfp.sh")
+            set(DFP_SCRIPT_MSG "Run: ./get-dfp.sh PIC32MZ-${PIC32_FAMILY}")
+        else()
+            set(DFP_SCRIPT_MSG "Ensure get-dfp.sh is present and run it")
+        endif()
+        
+        message(FATAL_ERROR 
+            "Device Family Pack not found for PIC32MZ-${PIC32_FAMILY}!\n"
+            "\n"
+            "Expected location: ${EXPECTED_DFP_PATH}\n"
+            "\n"
+            "The DFP contains processor-specific headers and linker scripts required\n"
+            "for building PIC32 applications. You must download and patch it first.\n"
+            "\n"
+            "To fix this:\n"
+            "  ${DFP_SCRIPT_MSG}\n"
+            "\n"
+            "On Windows, you need MSYS2 to run the script:\n"
+            "  1. Install MSYS2 from https://www.msys2.org/\n"
+            "  2. Open MSYS2 UCRT64 terminal\n"
+            "  3. Install dependencies: pacman -S wget unzip sed findutils\n"
+            "  4. Navigate to this directory and run: ./get-dfp.sh PIC32MZ-${PIC32_FAMILY}\n"
+            "\n"
+            "Or download all supported DFPs at once:\n"
+            "  ./get-dfp.sh all\n"
+            "\n"
+            "To skip this check (not recommended): -DPIC32_SKIP_DFP_CHECK=ON"
+        )
+    else()
+        message(STATUS "DFP found: ${EXPECTED_DFP_PATH}")
+    endif()
+endif()
+
+# ============================================================================
+# Custom target to fetch DFP (requires bash/MSYS2 on Windows)
+# ============================================================================
+
+# Find bash - on Windows this will find MSYS2/Git Bash if available
+find_program(BASH_EXECUTABLE 
+    NAMES bash bash.exe
+    HINTS 
+        "C:/msys64/usr/bin"
+        "C:/msys64/bin"
+        "$ENV{PROGRAMFILES}/Git/bin"
+        "$ENV{LOCALAPPDATA}/Programs/Git/bin"
+    DOC "Path to bash executable (MSYS2 or Git Bash on Windows)"
+)
+
+if(BASH_EXECUTABLE AND EXISTS "${CMAKE_SOURCE_DIR}/get-dfp.sh")
+    # Add a target to fetch DFPs
+    add_custom_target(fetch-dfp
+        COMMAND ${BASH_EXECUTABLE} "${CMAKE_SOURCE_DIR}/get-dfp.sh" "PIC32MZ-${PIC32_FAMILY}"
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        COMMENT "Downloading and patching PIC32MZ-${PIC32_FAMILY} Device Family Pack..."
+        VERBATIM
+    )
+    
+    add_custom_target(fetch-dfp-all
+        COMMAND ${BASH_EXECUTABLE} "${CMAKE_SOURCE_DIR}/get-dfp.sh" "all"
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        COMMENT "Downloading and patching all Device Family Packs..."
+        VERBATIM
+    )
+    
+    message(STATUS "DFP fetch targets available: 'fetch-dfp', 'fetch-dfp-all'")
+elseif(WIN32)
+    message(STATUS "Note: Install MSYS2 to enable 'fetch-dfp' target (https://www.msys2.org/)")
+endif()
+
+# ============================================================================
 # Build Configuration
 # ============================================================================
 
-# Library-specific compiler flags
-set(LIBPIC32_OPTIM_FLAGS 
-    "-O3"
-    "-fno-strict-aliasing"      # Library aliases extensively
-    "-fno-optimize-sibling-calls"
-)
+# Default to Release if not specified
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
 
-set(LIBPIC32_DEBUG_FLAGS
-    "-Og"                        # Debug-friendly optimization
-    "-g3"                        # Maximum debug info
-    "-fvar-tracking"            # Track variables through optimization
-)
-
+# Determine if this is a debug build
+# CLion sets CMAKE_BUILD_TYPE and may also define DEBUG via -DDEBUG
+if(CMAKE_BUILD_TYPE STREQUAL "Debug" OR DEFINED DEBUG)
+    set(PIC32_DEBUG_BUILD TRUE)
+else()
+    set(PIC32_DEBUG_BUILD FALSE)
+endif()
 
 # ============================================================================
 # Processor Variant Selection
@@ -57,7 +153,9 @@ else()
     set(DEFAULT_PROCESSOR "-D__32MZ2064DAR176__")
 endif()
 
-
+# ============================================================================
+# Compiler Flags
+# ============================================================================
 
 set(LIBPIC32_PLATFORM_FLAGS
     "-ffreestanding"
@@ -65,7 +163,7 @@ set(LIBPIC32_PLATFORM_FLAGS
     "-fdata-sections"
     "-mno-gpopt"                # Disable GP optimization
     "-mexplicit-relocs"         # Explicit relocations
-        "-D_ABIO32"             # 32bit abi
+    "-D_ABIO32"                 # 32bit abi
 )
 
 set(LIBPIC32_DEFINES
@@ -79,12 +177,13 @@ set(LIBPIC32_DEFINES
 
 # Public headers that will be installed
 set(LIBPIC32_PUBLIC_INCLUDES
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
 )
 
 # Private headers for building the library
 set(LIBPIC32_PRIVATE_INCLUDES
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+        ${PIC32_DFP_PATH}/include
 )
 
 set(ARCH_SOURCES
@@ -372,8 +471,6 @@ set(DEFAULTVECTORS_SOURCES
         src/default_vector_dispatch/vector97.S
         src/default_vector_dispatch/vector98.S
         src/default_vector_dispatch/vector99.S
-
-
 )
 
 set(DSP_SOURCES
@@ -527,85 +624,64 @@ set(LIBPIC32_SOURCES
         ${DSPR2_SOURCES}
         ${STARTUP_SOURCES}
         ${STUBS_SOURCES}
+        include/cp0defs.h
+        include/sys/asm.h
 )
 
 # ============================================================================
-# Library Target - Release Build
+# Library Target - Single target, build type determines flags
 # ============================================================================
 
-add_library(pic32_release STATIC ${LIBPIC32_SOURCES})
+add_library(pic32 STATIC ${LIBPIC32_SOURCES})
 
-# Set output name
-set_target_properties(pic32_release PROPERTIES
+# Set output name and location
+set_target_properties(pic32 PROPERTIES
     OUTPUT_NAME "pic32"
     ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lib"
 )
 
-# Include directories
-target_include_directories(pic32_release
-    PUBLIC
-        ${LIBPIC32_PUBLIC_INCLUDES}
-        ${PIC32_DFP_PATH}/include}
-    PRIVATE
-        ${LIBPIC32_PRIVATE_INCLUDES}
-)
-
-# Compile options
-target_compile_options(pic32_release PRIVATE
-    ${LIBPIC32_OPTIM_FLAGS}
+# Platform flags apply to all builds
+target_compile_options(pic32 PRIVATE
     ${LIBPIC32_PLATFORM_FLAGS}
-        ${DEFAULT_PROCESSOR}
+    ${DEFAULT_PROCESSOR}
 )
-
-# Compile definitions
-target_compile_definitions(pic32_release PRIVATE
-    ${LIBPIC32_DEFINES}
-    NDEBUG=1
-)
-
-# Architecture-specific flags are already set by toolchain file via CMAKE_C_FLAGS_INIT
-
-# Strip debug symbols from objects before archiving (matches original behavior)
-add_custom_command(TARGET pic32_release POST_BUILD
-    COMMAND ${CMAKE_STRIP} -X $<TARGET_OBJECTS:pic32_release>
-    COMMENT "Stripping debug symbols from release objects"
-    VERBATIM
-)
-
-# ============================================================================
-# Library Target - Debug Build
-# ============================================================================
-
-add_library(pic32_debug STATIC ${LIBPIC32_SOURCES})
-
-# Set output name
-set_target_properties(pic32_debug PROPERTIES
-    OUTPUT_NAME "pic32_debug"
-    ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/lib"
-)
-
 # Include directories
-target_include_directories(pic32_debug
-    PUBLIC
-        ${LIBPIC32_PUBLIC_INCLUDES}
-        ${PIC32_DFP_PATH}/include}
-    PRIVATE
-        ${LIBPIC32_PRIVATE_INCLUDES}
+target_include_directories(pic32
+        PUBLIC ${LIBPIC32_PUBLIC_INCLUDES}
+        PRIVATE ${LIBPIC32_PRIVATE_INCLUDES}
 )
 
-# Compile options - use debug flags instead of optimization
-target_compile_options(pic32_debug PRIVATE
-    ${LIBPIC32_DEBUG_FLAGS}
-    ${LIBPIC32_PLATFORM_FLAGS}
-        ${DEFAULT_PROCESSOR}
+# Build-type specific flags using generator expressions
+target_compile_options(pic32 PRIVATE
+    $<$<CONFIG:Debug>:-Og>
+    $<$<CONFIG:Debug>:-g3>
+    $<$<CONFIG:Debug>:-fvar-tracking>
+    $<$<CONFIG:Release>:-O3>
+    $<$<CONFIG:Release>:-fno-strict-aliasing>
+    $<$<CONFIG:Release>:-fno-optimize-sibling-calls>
+    $<$<CONFIG:RelWithDebInfo>:-O3>
+    $<$<CONFIG:RelWithDebInfo>:-g>
+    $<$<CONFIG:RelWithDebInfo>:-fno-strict-aliasing>
+    $<$<CONFIG:MinSizeRel>:-Os>
+    $<$<CONFIG:MinSizeRel>:-fno-strict-aliasing>
 )
 
-# Compile definitions
-target_compile_definitions(pic32_debug PRIVATE
+# Compile definitions - base + build-type specific
+target_compile_definitions(pic32 PRIVATE
     ${LIBPIC32_DEFINES}
-    DEBUG=1
-    __DEBUG=1
+    $<$<CONFIG:Debug>:DEBUG=1>
+    $<$<CONFIG:Debug>:__DEBUG=1>
+    $<$<NOT:$<CONFIG:Debug>>:NDEBUG=1>
 )
+
+# Strip debug symbols from release builds
+if(NOT PIC32_DEBUG_BUILD)
+    add_custom_command(TARGET pic32 POST_BUILD
+        COMMAND ${CMAKE_STRIP} -X $<TARGET_FILE:pic32>
+        COMMENT "Stripping debug symbols from release build"
+        VERBATIM
+    )
+endif()
 
 # ============================================================================
 # Configuration Summary
@@ -617,6 +693,7 @@ message(STATUS "PIC32 Support Library (libpic32)")
 message(STATUS "========================================")
 message(STATUS "  Processor Family: ${PIC32_FAMILY}")
 message(STATUS "  Hardware FPU:     ${PIC32_HAS_FPU}")
+message(STATUS "  Build Type:       ${CMAKE_BUILD_TYPE}")
 message(STATUS "  Toolchain:        ${CMAKE_C_COMPILER}")
 
 if(PIC32_FAMILY STREQUAL "DA")
@@ -628,9 +705,7 @@ elseif(PIC32_FAMILY STREQUAL "EF")
 endif()
 
 message(STATUS "")
-message(STATUS "  Build Outputs:")
-message(STATUS "    Release: lib/libpic32.a")
-message(STATUS "    Debug:   lib/libpic32_debug.a")
+message(STATUS "  Build Output:     lib/libpic32.a")
 message(STATUS "")
 message(STATUS "  Source modules:")
 message(STATUS "    - cppcfl (${CMAKE_CURRENT_LIST_DIR}/src/cppcfl/profiling)")
@@ -642,51 +717,31 @@ message(STATUS "")
 # Helper Targets
 # ============================================================================
 
-# Build only release
-add_custom_target(release
-    DEPENDS pic32_release
-    COMMENT "Building release version only"
-)
-
-# Build only debug
-add_custom_target(debug
-    DEPENDS pic32_debug
-    COMMENT "Building debug version only"
-)
-
 # Show configuration without building
 add_custom_target(show-config
     COMMAND ${CMAKE_COMMAND} -E echo "PIC32 Family: ${PIC32_FAMILY}"
     COMMAND ${CMAKE_COMMAND} -E echo "Has FPU: ${PIC32_HAS_FPU}"
+    COMMAND ${CMAKE_COMMAND} -E echo "Build Type: ${CMAKE_BUILD_TYPE}"
     COMMAND ${CMAKE_COMMAND} -E echo "DFP Path: ${PIC32_DFP_PATH}"
     COMMAND ${CMAKE_COMMAND} -E echo "Toolchain: ${PIC32_TOOLCHAIN_PATH}"
     COMMENT "Displaying build configuration"
 )
 
 # ============================================================================
-# Link Script Support (Optional)
+# Interface Library for consumers
 # ============================================================================
-# If you need to export libraries with specific link directories for your
-# applications to use, you can create an interface library:
+# Applications can link against pic32::pic32 to get the correct library
+# and include directories automatically
 
 add_library(pic32_interface INTERFACE)
+add_library(pic32::pic32 ALIAS pic32_interface)
 
-target_include_directories(pic32_interface INTERFACE
-    $<BUILD_INTERFACE:${LIBPIC32_PUBLIC_INCLUDES}>
-    $<INSTALL_INTERFACE:include>
-)
+target_link_libraries(pic32_interface INTERFACE pic32)
 
-# Link the appropriate library variant based on CMAKE_BUILD_TYPE
-target_link_libraries(pic32_interface INTERFACE
-    $<$<CONFIG:Debug>:pic32_debug>
-    $<$<CONFIG:Release>:pic32_release>
-    $<$<CONFIG:RelWithDebInfo>:pic32_release>
-    $<$<CONFIG:MinSizeRel>:pic32_release>
-)
-
-# Export so other parts of the build can use target_link_libraries(myapp pic32_interface)
-install(TARGETS pic32_interface
+# Export so other parts of the build can use target_link_libraries(myapp pic32::pic32)
+install(TARGETS pic32 pic32_interface
     EXPORT pic32_targets
+    ARCHIVE DESTINATION lib
     COMPONENT libraries
 )
 
@@ -700,4 +755,5 @@ install(EXPORT pic32_targets
 ################################################################################
 # Organize in IDE
 ################################################################################
+set_target_properties(pic32 PROPERTIES FOLDER "libs")
 set_target_properties(pic32_interface PROPERTIES FOLDER "libs")

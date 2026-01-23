@@ -45,8 +45,8 @@ set(CMAKE_NM "${TOOLCHAIN_PATH}/bin/${TOOLCHAIN_PREFIX}nm${TOOLCHAIN_EXT}" CACHE
 # ============================================================================
 
 # Try to find DFP
-if(EXISTS "${CMAKE_SOURCE_DIR}/mipsisa32r2/dfp/PIC32MZ-EF")
-    set(DFP_PATH "${CMAKE_SOURCE_DIR}/mipsisa32r2/dfp/PIC32MZ-EF")
+if(EXISTS "${CMAKE_SOURCE_DIR}/dfp/PIC32MZ-EF")
+    set(DFP_PATH "${CMAKE_SOURCE_DIR}/dfp/PIC32MZ-EF")
     message(STATUS "Using DFP from project: ${DFP_PATH}")
 else()
 #    message(WARNING "PIC32MZ-DA DFP not found in expected locations!")
@@ -125,7 +125,7 @@ set(CMAKE_C_FLAGS_MINSIZEREL_INIT "-Os -DNDEBUG")
 set(CMAKE_C_FLAGS_RELWITHDEBINFO_INIT "-O2 -g -DNDEBUG")
 
 # C++ Flags - include atom and DFP paths
-set(CMAKE_CXX_FLAGS_INIT "${PIC32_CPU_FLAGS}${PIC32_INCLUDE_FLAGS} ${PIC32_WARN_FLAGS} -fno-exceptions -fno-rtti")
+set(CMAKE_CXX_FLAGS_INIT "${PIC32_CPU_FLAGS} ${PIC32_INCLUDE_FLAGS} ${PIC32_WARN_FLAGS} -fno-exceptions -fno-rtti")
 set(CMAKE_CXX_FLAGS_DEBUG_INIT "-Og -g3 -DDEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE_INIT "-O2 -DNDEBUG")
 set(CMAKE_CXX_FLAGS_MINSIZEREL_INIT "-Os -DNDEBUG")
