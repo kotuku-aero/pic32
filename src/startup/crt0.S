@@ -18,7 +18,38 @@
  *-------------------------------------------------------------------------*/
 
 /*-------------------------------------------------------------------------
- *  C Runtime Startup
+ *  C Runtime Startup (crt0.S)
+ *
+ *  OVERVIEW:
+ *  This is the C Runtime Startup code for PIC32 microcontrollers.
+ *  It executes immediately after reset and is responsible for:
+ *    1. Detecting NMI (Non-Maskable Interrupt) conditions
+ *    2. Initializing the stack pointer and global pointer
+ *    3. Setting up shadow register sets (for fast interrupts)
+ *    4. Clearing BSS (uninitialized data) to zero
+ *    5. Copying initialized data from flash to RAM (if applicable)
+ *    6. Copying RAM functions from flash to RAM (if applicable)
+ *    7. Initializing caches and TLB
+ *    8. Configuring CP0 (Coprocessor 0) registers
+ *    9. Calling C library initialization (__libc_init_array)
+ *   10. Calling C++ constructors (if applicable)
+ *   11. Jumping to main()
+ *
+ *  LINKER SYMBOL DEPENDENCIES:
+ *  This code requires specific symbols from the linker script:
+ *    Single underscore (standard Microchip symbols):
+ *      _stack, _gp, _bss_begin, _bss_end, _ebase_address, _vector_spacing
+ *    Double underscore (XC32-specific, may need manual definition):
+ *      __data_start, __data_init, __data_end
+ *      __ramfunc_begin, __ramfunc_end, __ramfunc_load, __ramfunc_length
+ *
+ *  DEBUGGING TIPS:
+ *  - Set breakpoint at _reset to catch reset
+ *  - Set breakpoint at _no_nmi to skip NMI handling
+ *  - Set breakpoint at _main_entry to catch entry to C code
+ *  - Check $sp (stack pointer) after line 99 - should be valid stack address
+ *  - Check $gp (global pointer) after line 107 - should be _gp value
+ *  - Watch $8, $9, $10 during data/BSS init loops to see copy progress
  *-------------------------------------------------------------------------*/
 
 #include <xc.h>
@@ -70,7 +101,23 @@ _reset:
         .set noreorder
 
         ##################################################################
-        # Startup code
+        # Startup code - Main initialization sequence
+        #
+        # BOOT SEQUENCE ORDER (important for hardware initialization):
+        #  1. NMI detection (here)
+        #  2. Stack pointer initialization
+        #  3. Global pointer initialization
+        #  4. Shadow register set initialization (for fast interrupts)
+        #  5. _on_reset() callback (early hardware setup)
+        #  6. TLB initialization (if using external memory)
+        #  7. BSS clearing (zero uninitialized variables)
+        #  8. L1 cache initialization
+        #  9. Data section initialization (copy .data from flash to RAM)
+        # 10. RAM function copying (if any)
+        # 11. CP0 register setup (interrupts still disabled)
+        # 12. _on_bootstrap() callback
+        # 13. Clear BEV (use normal exception vectors)
+        # 14. Jump to main via _main_entry
         ##################################################################
         .align 2
         .globl _startup
@@ -79,14 +126,20 @@ _reset:
 _startup:
         ##################################################################
         # If entered because of an NMI, jump to the NMI handler.
+        #
+        # NMI (Non-Maskable Interrupt) can be triggered by:
+        #  - Watchdog timer timeout
+        #  - Configuration mismatch
+        #  - DMT (Deadman Timer) timeout
+        #  - Certain critical hardware errors
         ##################################################################
         mfc0    $26,_CP0_STATUS         # k0 = $26
-        ext     $26,$26,19,1            # Extract NMI bit
-        beqz    $26,_no_nmi
+        ext     $26,$26,19,1            # Extract NMI bit (bit 19)
+        beqz    $26,_no_nmi             # if not NMI, continue normal boot
         nop
         lui     $26,%hi(_nmi_handler)
         addiu   $26,$26,%lo(_nmi_handler)
-        jr      $26
+        jr      $26                     # jump to NMI handler (does not return)
         nop
 _no_nmi:
 
@@ -177,21 +230,38 @@ _no_nmi:
 _skip_tlb_init:
 
         ##################################################################
-        # Clear uninitialized data sections
+        # Clear uninitialized data sections (BSS)
+        #
+        # BSS SECTION OVERVIEW:
+        # The BSS (Block Started by Symbol) section contains uninitialized
+        # global and static variables. In C, these are guaranteed to be
+        # zero at program start. Examples:
+        #   static int counter;        // goes in BSS
+        #   int global_array[100];     // goes in BSS
+        #
+        # The linker allocates space for BSS in RAM but doesn't store it
+        # in the flash image (saving flash space). This loop zeros the RAM.
+        #
+        # LINKER SYMBOLS:
+        #   _bss_begin: Start of BSS section in RAM
+        #   _bss_end:   End of BSS section in RAM
+        #
+        # NOTE: This must happen BEFORE copying initialized data, since some
+        # linker scripts may overlap or have BSS adjacent to .data sections.
         ##################################################################
-        lui	$8,%hi(_bss_begin)      # t0 = $8
+        lui	$8,%hi(_bss_begin)      # t0 = $8 = start of BSS
         addiu   $8,$8,%lo(_bss_begin)
-        lui	$9,%hi(_bss_end)        # t1 = $9
+        lui	$9,%hi(_bss_end)        # t1 = $9 = end of BSS
         addiu   $9,$9,%lo(_bss_end)
         b       _bss_check
         nop
 
 _bss_init:
-        sw      $0,0x0($8)
-        addiu   $8,$8,4
+        sw      $0,0x0($8)              # write zero to current address
+        addiu   $8,$8,4                 # advance to next word
 _bss_check:
-        sltu    $10,$8,$9               # t2 = $10
-        bne     $10,$0,_bss_init
+        sltu    $10,$8,$9               # t2 = $10, check if $8 < $9
+        bne     $10,$0,_bss_init        # if yes, continue clearing
         nop
 
         ##################################################################
@@ -208,61 +278,127 @@ _skip_cache_init:
 
         ##################################################################
         # Initialize data sections
+        # Copy initialized data from flash (LMA) to RAM (VMA)
+        #
+        # LINKER SCRIPT REQUIREMENTS:
+        # This code requires the linker script to define these symbols:
+        #   __data_start: Start address of .data section in RAM (VMA)
+        #   __data_init:  Start address of initialization data in flash (LMA)
+        #   __data_end:   End address of .data section in RAM (VMA)
+        #
+        # TYPICAL USAGE:
+        # The linker script should have a .data section like:
+        #   .data : { *(.data*) } >RAM AT>FLASH
+        # And provide symbols:
+        #   __data_start = ADDR(.data);
+        #   __data_init  = LOADADDR(.data);
+        #   __data_end   = ADDR(.data) + SIZEOF(.data);
+        #
+        # CURRENT CONFIGURATION (Canfly2 project):
+        # The Microchip DFP linker scripts do NOT use AT> clauses for .data
+        # sections, meaning data is allocated directly in RAM (VMA == LMA).
+        # To satisfy this crt0.S code, we define via linker command line:
+        #   --defsym=__data_start=0x80000000
+        #   --defsym=__data_init=0x80000000
+        #   --defsym=__data_end=0x80000000
+        # This makes start==end, so the copy loop below executes zero times.
+        #
+        # NOTE: If you need to copy data from flash to RAM to save RAM space,
+        # you would need to modify the linker script to add AT> clauses and
+        # update these symbol definitions accordingly.
         ##################################################################
-        lui	$8,%hi(__data_start)    # t0 = $8
+        lui	$8,%hi(__data_start)    # t0 = $8 = destination (RAM)
         addiu   $8,$8,%lo(__data_start)
-        lui	$9,%hi(__data_init)     # t1 = $9
+        lui	$9,%hi(__data_init)     # t1 = $9 = source (flash LMA)
         addiu   $9,$9,%lo(__data_init)
-        lui	$10,%hi(__data_end)     # t2 = $10
+        lui	$10,%hi(__data_end)     # t2 = $10 = end of destination
         addiu   $10,$10,%lo(__data_end)
         b       _init_check
         nop
 
 _init_data:
-        lw      $11,0x0($9)             # t3 = $11
-        sw      $11,0x0($8)
-        addiu   $9,$9,4
-        addiu   $8,$8,4
+        lw      $11,0x0($9)             # t3 = $11, load word from flash
+        sw      $11,0x0($8)             # store word to RAM
+        addiu   $9,$9,4                 # advance source pointer
+        addiu   $8,$8,4                 # advance destination pointer
 _init_check:
-        sltu    $11,$8,$10
-        bne     $11,$0,_init_data
+        sltu    $11,$8,$10              # check if $8 < $10 (more data to copy?)
+        bne     $11,$0,_init_data       # if yes, continue copying
         nop
 
         ##################################################################
         # If there are no RAM functions, skip the next two sections --
         # copying RAM functions from program flash to data RAM and
         # initializing bus matrix registers.
+        #
+        # RAM FUNCTIONS OVERVIEW:
+        # RAM functions are performance-critical functions that execute from
+        # RAM instead of flash. They are typically used for:
+        #   - Flash programming/erase operations (can't execute from flash
+        #     while modifying it)
+        #   - Interrupt handlers requiring minimal latency
+        #   - Time-critical loops that benefit from RAM's faster access
+        #
+        # LINKER SCRIPT REQUIREMENTS:
+        # Requires these symbols from the linker script:
+        #   __ramfunc_length: Size of RAM functions in bytes (0 if none)
+        #   __ramfunc_begin:  Start address in RAM where functions will run
+        #   __ramfunc_load:   Source address in flash where functions are stored
+        #   __ramfunc_end:    End address in RAM
+        #
+        # TYPICAL USAGE:
+        # The linker script would have:
+        #   .ramfunc : { *(.ramfunc*) } >RAM AT>FLASH
+        # And provide:
+        #   __ramfunc_begin  = ADDR(.ramfunc);
+        #   __ramfunc_load   = LOADADDR(.ramfunc);
+        #   __ramfunc_end    = ADDR(.ramfunc) + SIZEOF(.ramfunc);
+        #   __ramfunc_length = SIZEOF(.ramfunc);
+        #
+        # CURRENT CONFIGURATION (Canfly2 project):
+        # We currently don't use RAM functions, so all symbols are set to 0:
+        #   --defsym=__ramfunc_begin=0
+        #   --defsym=__ramfunc_end=0
+        #   --defsym=__ramfunc_load=0
+        #   --defsym=__ramfunc_length=0
+        # The length check below causes immediate skip to _ramfunc_done.
         ##################################################################
         lui	$8,%hi(__ramfunc_length)
         addiu   $8,$8,%lo(__ramfunc_length)
-        beqz	$8,_ramfunc_done
+        beqz	$8,_ramfunc_done        # if length==0, skip RAM function setup
         nop
 
         ##################################################################
         # Copy RAM functions from Flash to RAM.
+        # Similar to data init above, but for executable code sections.
         ##################################################################
-        lui	$8,%hi(__ramfunc_begin)
+        lui	$8,%hi(__ramfunc_begin) # t0 = $8 = destination (RAM)
         addiu   $8,$8,%lo(__ramfunc_begin)
-        lui	$9,%hi(__ramfunc_load)
+        lui	$9,%hi(__ramfunc_load)  # t1 = $9 = source (flash)
         addiu   $9,$9,%lo(__ramfunc_load)
-        lui	$10,%hi(__ramfunc_end)
+        lui	$10,%hi(__ramfunc_end)  # t2 = $10 = end address
         addiu   $10,$10,%lo(__ramfunc_end)
         b       _init_ramfunc_check
         nop
 
 _init_ramfunc:
-        lw      $11,0x0($9)
-        sw      $11,0x0($8)
-        addiu   $9,$9,4
-        addiu   $8,$8,4
+        lw      $11,0x0($9)             # load word from flash
+        sw      $11,0x0($8)             # store word to RAM
+        addiu   $9,$9,4                 # advance source
+        addiu   $8,$8,4                 # advance destination
 _init_ramfunc_check:
-        sltu    $11,$8,$10
+        sltu    $11,$8,$10              # more to copy?
         bne     $11,$0,_init_ramfunc
         nop
 
         ##################################################################
         # Initialize CPU bus matrix registers to enable cacheability and
         # SP bus-access on RAM (if function exists).
+        #
+        # This configures the PIC32 bus matrix (BMX) registers to properly
+        # handle RAM functions. The BMX controls memory access permissions
+        # and caching behavior. The __pic32_init_ssx function (if provided)
+        # sets up these registers based on where RAM functions are located.
         ##################################################################
         .weak __pic32_init_ssx
         lui     $8,%hi(__pic32_init_ssx)

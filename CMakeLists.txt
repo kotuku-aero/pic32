@@ -626,7 +626,10 @@ set(LIBPIC32_SOURCES
 # Library Target - Single target, build type determines flags
 # ============================================================================
 
-add_library(pic32 STATIC ${LIBPIC32_SOURCES})
+add_library(pic32 STATIC
+        ${LIBPIC32_SOURCES}
+        src/xc32_float_compat.c
+)
 
 # Set output name and location
 set_target_properties(pic32 PROPERTIES
