@@ -35,7 +35,7 @@
  * Newlib expects a per-thread errno, but in bare metal we use a simple global.
  */
 static int _errno = 0;
-int *__errno(void) {
+int __attribute__((weak)) *__errno(void) {
     return &_errno;
 }
 
@@ -74,7 +74,7 @@ extern void panic(void) __attribute__((weak));
  *   heap_end += incr;
  *   return (void *)prev_heap_end;
  */
-void *sbrk(int incr) {
+void __attribute__((weak)) *sbrk(int incr) {
     (void)incr;
 
     // If panic is provided, call it
@@ -100,7 +100,7 @@ void *sbrk(int incr) {
  *  - Trigger watchdog reset
  *  - Enter low-power sleep mode
  */
-void _exit(int status) {
+void __attribute__((weak)) _exit(int status) {
     (void)status;  // Unused in bare metal
 
     // Disable interrupts
@@ -116,7 +116,7 @@ void _exit(int status) {
  * close - Close a file descriptor
  * Not supported in bare metal environment.
  */
-int close(int file) {
+int __attribute__((weak)) close(int file) {
     (void)file;
     errno = EBADF;  // Bad file descriptor
     return -1;
@@ -129,7 +129,7 @@ int close(int file) {
  * Returns minimal information claiming the file is a character device.
  * This allows isatty() and similar functions to work correctly.
  */
-int fstat(int file, struct stat *st) {
+int __attribute__((weak)) fstat(int file, struct stat *st) {
     (void)file;
 
     // Make it look like a character device (for stdout/stderr)
@@ -143,7 +143,7 @@ int fstat(int file, struct stat *st) {
  *
  * This allows printf/scanf to work correctly.
  */
-int isatty(int file) {
+int __attribute__((weak)) isatty(int file) {
     // Consider stdin(0), stdout(1), stderr(2) as TTY
     return (file >= 0 && file <= 2) ? 1 : 0;
 }
@@ -152,7 +152,7 @@ int isatty(int file) {
  * lseek - Reposition file offset
  * Not supported in bare metal environment.
  */
-int lseek(int file, int ptr, int dir) {
+int __attribute__((weak)) lseek(int file, int ptr, int dir) {
     (void)file;
     (void)ptr;
     (void)dir;
@@ -175,7 +175,7 @@ int lseek(int file, int ptr, int dir) {
  *   }
  *   return 0;
  */
-int read(int file, char *ptr, int len) {
+int __attribute__((weak)) read(int file, char *ptr, int len) {
     (void)file;
     (void)ptr;
     (void)len;
@@ -196,7 +196,7 @@ int read(int file, char *ptr, int len) {
  *   }
  *   return len;
  */
-int write(int file, char *ptr, int len) {
+int __attribute__((weak)) write(int file, char *ptr, int len) {
     (void)file;
     (void)ptr;
 
@@ -209,7 +209,7 @@ int write(int file, char *ptr, int len) {
  * kill - Send signal to a process
  * Not supported in bare metal (no processes).
  */
-int kill(int pid, int sig) {
+int __attribute__((weak)) kill(int pid, int sig) {
     (void)pid;
     (void)sig;
     errno = EINVAL;
@@ -221,6 +221,6 @@ int kill(int pid, int sig) {
  * Not supported in bare metal (no processes).
  * Returns a dummy PID to satisfy newlib.
  */
-int getpid(void) {
+int __attribute__((weak)) getpid(void) {
     return 1;  // Return a dummy PID
 }

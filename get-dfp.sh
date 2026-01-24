@@ -346,10 +346,163 @@ patch_linker_scripts() {
     find "${dfp_dir}" -name "*.ld" | while read -r ldfile; do
         if grep -q "^SECTIONS" "$ldfile" 2>/dev/null; then
             patch_single_linker_script "$ldfile"
+            # Also patch data sections for proper VMA/LMA (AT > flash)
+            patch_data_sections_for_lma "$ldfile"
         fi
     done
     
     info "Linker script patching complete for ${name}"
+}
+
+patch_data_sections_for_lma() {
+    local ldfile="$1"
+    local basename_ld=$(basename "$ldfile")
+    local tmpfile=$(mktemp)
+    
+    info "  Patching data sections for AT > flash in: ${basename_ld}"
+    
+    # -------------------------------------------------------------------------
+    # This function patches the linker script to:
+    # 1. Add _data_begin symbol before .dbg_data section
+    # 2. Add _data_init symbol to capture the LMA (flash address) of init data
+    # 3. Add 'AT > kseg0_program_mem' to all initialized data sections
+    #
+    # Data sections that need AT > flash (have initialized data):
+    #   .jcr, .eh_frame (ONLY_IF_RW), .gcc_except_table (ONLY_IF_RW),
+    #   .persist, .data, .got, .sdata, .lit8, .lit4
+    #
+    # Sections that should NOT get AT > flash:
+    #   .dbg_data (NOLOAD), .sbss, .bss, .heap, .stack
+    # -------------------------------------------------------------------------
+    
+    # Check if already patched (look for _data_begin)
+    if grep -q '_data_begin = .;' "$ldfile"; then
+        info "    Already patched for data LMA, skipping"
+        return
+    fi
+    
+    # Use awk for the complex multi-pattern transformation
+    awk '
+    BEGIN {
+        first_data_section_done = 0
+    }
+    
+    # For .jcr section - add AT > flash and the _data_init symbol
+    /^[[:space:]]*\.jcr[[:space:]]*:/ {
+        print $0
+        in_jcr = 1
+        next
+    }
+    
+    # Handle the closing of .jcr section
+    in_jcr && /} *>kseg0_data_mem$/ {
+        print "  } >kseg0_data_mem AT > kseg0_program_mem"
+        print "  /* Export the start of data memory for crt0.S */"
+        print "  _data_begin = .;"
+        print "  /* LMA (flash address) of initialized data for crt0.S to copy from */"
+        print "  _data_init = LOADADDR(.jcr);"
+        in_jcr = 0
+        first_data_section_done = 1
+        next
+    }
+    
+    # For .eh_frame ONLY_IF_RW - add AT > flash
+    /^[[:space:]]*\.eh_frame[[:space:]]*:[[:space:]]*ONLY_IF_RW/ {
+        print $0
+        in_eh_frame_rw = 1
+        next
+    }
+    in_eh_frame_rw && /} *>kseg0_data_mem$/ {
+        print "  } >kseg0_data_mem AT > kseg0_program_mem"
+        in_eh_frame_rw = 0
+        next
+    }
+    
+    # For .gcc_except_table ONLY_IF_RW - add AT > flash
+    /^[[:space:]]*\.gcc_except_table[[:space:]]*:[[:space:]]*ONLY_IF_RW/ {
+        print $0
+        in_gcc_except_rw = 1
+        next
+    }
+    in_gcc_except_rw && /} *>kseg0_data_mem$/ {
+        print "  } >kseg0_data_mem AT > kseg0_program_mem"
+        in_gcc_except_rw = 0
+        next
+    }
+    
+    # NOTE: .persist section is intentionally NOT given AT > flash
+    # Persistent data should survive resets and not be reinitialized from flash
+    
+    # For .data section - add AT > flash
+    /^[[:space:]]*\.data[[:space:]]*:/ {
+        print $0
+        in_data = 1
+        next
+    }
+    in_data && /} *>kseg0_data_mem$/ {
+        print "  } >kseg0_data_mem AT > kseg0_program_mem"
+        in_data = 0
+        next
+    }
+    
+    # For .got section - add AT > flash
+    # Note: There may be a commented AT already, we handle both cases
+    /^[[:space:]]*\.got[[:space:]]/ {
+        print $0
+        in_got = 1
+        next
+    }
+    in_got && /} *>kseg0_data_mem/ {
+        # Remove any existing comment about AT>
+        gsub(/\/\* AT>kseg0_program_mem \*\//, "")
+        gsub(/>kseg0_data_mem.*$/, ">kseg0_data_mem AT > kseg0_program_mem")
+        print
+        in_got = 0
+        next
+    }
+    
+    # For .sdata section - add AT > flash
+    /^[[:space:]]*\.sdata[[:space:]]/ {
+        print $0
+        in_sdata = 1
+        next
+    }
+    in_sdata && /} *>kseg0_data_mem$/ {
+        print "  } >kseg0_data_mem AT > kseg0_program_mem"
+        in_sdata = 0
+        next
+    }
+    
+    # For .lit8 section - add AT > flash
+    /^[[:space:]]*\.lit8[[:space:]]*:/ {
+        print $0
+        in_lit8 = 1
+        next
+    }
+    in_lit8 && /} *>kseg0_data_mem$/ {
+        print "  } >kseg0_data_mem AT > kseg0_program_mem"
+        in_lit8 = 0
+        next
+    }
+    
+    # For .lit4 section - add AT > flash
+    /^[[:space:]]*\.lit4[[:space:]]*:/ {
+        print $0
+        in_lit4 = 1
+        next
+    }
+    in_lit4 && /} *>kseg0_data_mem$/ {
+        print "  } >kseg0_data_mem AT > kseg0_program_mem"
+        in_lit4 = 0
+        next
+    }
+    
+    # Pass through all other lines unchanged
+    { print }
+    
+    ' "$ldfile" > "$tmpfile" && mv "$tmpfile" "$ldfile"
+    
+    rm -f "$tmpfile" 2>/dev/null || true
 }
 
 patch_single_linker_script() {

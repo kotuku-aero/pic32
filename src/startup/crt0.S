@@ -52,17 +52,13 @@
  *  - Watch $8, $9, $10 during data/BSS init loops to see copy progress
  *-------------------------------------------------------------------------*/
 
+// this loads the hardware definitions for the exact processor we are using
 #include <xc.h>
+// These are the definitions for the CP0 registers
 #include <cp0defs.h>
 
-#if !defined(PIC32_SRS_SET_COUNT)
-#  if defined(__PIC32_SRS_SET_COUNT)
-#    define PIC32_SRS_SET_COUNT __PIC32_SRS_SET_COUNT
-#  else
-#    warning PIC32_SRS_SET_COUNT not defined on build line
-#    define PIC32_SRS_SET_COUNT 2
-#  endif
-#endif
+// the pic32MZ processor has 8 shadow registers
+#define PIC32_SRS_SET_COUNT 8
 
 /* This file contains 32-bit assembly code */
        .set nomips16
@@ -158,28 +154,6 @@ _no_nmi:
         ##################################################################
         lui     $28,%hi(_gp)            # gp = $28
         addiu   $28,$28,%lo(_gp)
-
-#if (PIC32_SRS_SET_COUNT == 2)
-        ##################################################################
-        # Initialize Global Pointer in Shadow Set
-        #   The SRSCtl's PSS field must be set to the shadow set in which
-        #   to initialize the global pointer.  Since we have only a
-        #   single shadow set (besides the normal), we will initialize
-        #   SRSCtl<PSS> to SRSCtl<HSS>.  We then write the global pointer
-        #   to the previous shadow set to ensure that on interrupt, the
-        #   global pointer has been initialized.
-        ##################################################################
-        mfc0    $9,_CP0_SRSCTL          # t1 = $9, Read SRSCtl register
-        add     $11,$9,$0               # t3 = $11, Save off current SRSCtl
-        ext     $10,$9,26,4             # t2 = $10, to obtain HSS field
-        ins     $9,$10,6,4              # Put HSS field
-        mtc0    $9,_CP0_SRSCTL          # into SRSCtl<PSS>
-        ehb                             # Clear hazard before using new SRSCTL
-        wrpgpr  $28,$28                 # Set global pointer in PSS
-        mtc0    $11,_CP0_SRSCTL         # Restore SRSCtl
-        ehb
-
-#elif (PIC32_SRS_SET_COUNT > 2)
         ##################################################################
         # Initialize Global Pointer in Shadow Set(s)
         #   The SRSCtl PSS field must be set to the shadow set in which
@@ -206,8 +180,6 @@ _no_nmi:
 
         mtc0    $11,_CP0_SRSCTL         # Restore SRSCtl
         ehb
-
-#endif /* (PIC32_SRS_SET_COUNT > 2) */
 
         ##################################################################
         # Call the "on reset" procedure
@@ -243,7 +215,7 @@ _skip_tlb_init:
         # in the flash image (saving flash space). This loop zeros the RAM.
         #
         # LINKER SYMBOLS:
-        #   _bss_begin: Start of BSS section in RAM
+        #   _sbss_begin: Start of BSS section in RAM
         #   _bss_end:   End of BSS section in RAM
         #
         # NOTE: This must happen BEFORE copying initialized data, since some
@@ -279,40 +251,16 @@ _skip_cache_init:
         ##################################################################
         # Initialize data sections
         # Copy initialized data from flash (LMA) to RAM (VMA)
-        #
-        # LINKER SCRIPT REQUIREMENTS:
-        # This code requires the linker script to define these symbols:
-        #   __data_start: Start address of .data section in RAM (VMA)
-        #   __data_init:  Start address of initialization data in flash (LMA)
-        #   __data_end:   End address of .data section in RAM (VMA)
-        #
-        # TYPICAL USAGE:
-        # The linker script should have a .data section like:
-        #   .data : { *(.data*) } >RAM AT>FLASH
-        # And provide symbols:
-        #   __data_start = ADDR(.data);
-        #   __data_init  = LOADADDR(.data);
-        #   __data_end   = ADDR(.data) + SIZEOF(.data);
-        #
-        # CURRENT CONFIGURATION (Canfly2 project):
-        # The Microchip DFP linker scripts do NOT use AT> clauses for .data
-        # sections, meaning data is allocated directly in RAM (VMA == LMA).
-        # To satisfy this crt0.S code, we define via linker command line:
-        #   --defsym=__data_start=0x80000000
-        #   --defsym=__data_init=0x80000000
-        #   --defsym=__data_end=0x80000000
-        # This makes start==end, so the copy loop below executes zero times.
-        #
-        # NOTE: If you need to copy data from flash to RAM to save RAM space,
-        # you would need to modify the linker script to add AT> clauses and
-        # update these symbol definitions accordingly.
         ##################################################################
-        lui	$8,%hi(__data_start)    # t0 = $8 = destination (RAM)
-        addiu   $8,$8,%lo(__data_start)
-        lui	$9,%hi(__data_init)     # t1 = $9 = source (flash LMA)
-        addiu   $9,$9,%lo(__data_init)
-        lui	$10,%hi(__data_end)     # t2 = $10 = end of destination
-        addiu   $10,$10,%lo(__data_end)
+        lui	$8,%hi(_data_begin)    # t0 = $8 = destination (RAM)
+        addiu   $8,$8,%lo(_data_begin)
+
+        lui	$9,%hi(_data_init)     # t1 = $9 = source (flash LMA)
+        addiu   $9,$9,%lo(_data_init)
+
+        lui	$10,%hi(_data_end)     # t2 = $10 = end of destination
+        addiu   $10,$10,%lo(_data_end)
+
         b       _init_check
         nop
 
@@ -325,90 +273,6 @@ _init_check:
         sltu    $11,$8,$10              # check if $8 < $10 (more data to copy?)
         bne     $11,$0,_init_data       # if yes, continue copying
         nop
-
-        ##################################################################
-        # If there are no RAM functions, skip the next two sections --
-        # copying RAM functions from program flash to data RAM and
-        # initializing bus matrix registers.
-        #
-        # RAM FUNCTIONS OVERVIEW:
-        # RAM functions are performance-critical functions that execute from
-        # RAM instead of flash. They are typically used for:
-        #   - Flash programming/erase operations (can't execute from flash
-        #     while modifying it)
-        #   - Interrupt handlers requiring minimal latency
-        #   - Time-critical loops that benefit from RAM's faster access
-        #
-        # LINKER SCRIPT REQUIREMENTS:
-        # Requires these symbols from the linker script:
-        #   __ramfunc_length: Size of RAM functions in bytes (0 if none)
-        #   __ramfunc_begin:  Start address in RAM where functions will run
-        #   __ramfunc_load:   Source address in flash where functions are stored
-        #   __ramfunc_end:    End address in RAM
-        #
-        # TYPICAL USAGE:
-        # The linker script would have:
-        #   .ramfunc : { *(.ramfunc*) } >RAM AT>FLASH
-        # And provide:
-        #   __ramfunc_begin  = ADDR(.ramfunc);
-        #   __ramfunc_load   = LOADADDR(.ramfunc);
-        #   __ramfunc_end    = ADDR(.ramfunc) + SIZEOF(.ramfunc);
-        #   __ramfunc_length = SIZEOF(.ramfunc);
-        #
-        # CURRENT CONFIGURATION (Canfly2 project):
-        # We currently don't use RAM functions, so all symbols are set to 0:
-        #   --defsym=__ramfunc_begin=0
-        #   --defsym=__ramfunc_end=0
-        #   --defsym=__ramfunc_load=0
-        #   --defsym=__ramfunc_length=0
-        # The length check below causes immediate skip to _ramfunc_done.
-        ##################################################################
-        lui	$8,%hi(__ramfunc_length)
-        addiu   $8,$8,%lo(__ramfunc_length)
-        beqz	$8,_ramfunc_done        # if length==0, skip RAM function setup
-        nop
-
-        ##################################################################
-        # Copy RAM functions from Flash to RAM.
-        # Similar to data init above, but for executable code sections.
-        ##################################################################
-        lui	$8,%hi(__ramfunc_begin) # t0 = $8 = destination (RAM)
-        addiu   $8,$8,%lo(__ramfunc_begin)
-        lui	$9,%hi(__ramfunc_load)  # t1 = $9 = source (flash)
-        addiu   $9,$9,%lo(__ramfunc_load)
-        lui	$10,%hi(__ramfunc_end)  # t2 = $10 = end address
-        addiu   $10,$10,%lo(__ramfunc_end)
-        b       _init_ramfunc_check
-        nop
-
-_init_ramfunc:
-        lw      $11,0x0($9)             # load word from flash
-        sw      $11,0x0($8)             # store word to RAM
-        addiu   $9,$9,4                 # advance source
-        addiu   $8,$8,4                 # advance destination
-_init_ramfunc_check:
-        sltu    $11,$8,$10              # more to copy?
-        bne     $11,$0,_init_ramfunc
-        nop
-
-        ##################################################################
-        # Initialize CPU bus matrix registers to enable cacheability and
-        # SP bus-access on RAM (if function exists).
-        #
-        # This configures the PIC32 bus matrix (BMX) registers to properly
-        # handle RAM functions. The BMX controls memory access permissions
-        # and caching behavior. The __pic32_init_ssx function (if provided)
-        # sets up these registers based on where RAM functions are located.
-        ##################################################################
-        .weak __pic32_init_ssx
-        lui     $8,%hi(__pic32_init_ssx)
-        addiu   $8,$8,%lo(__pic32_init_ssx)
-        beqz    $8,_ramfunc_done
-        nop
-        jalr    $8
-        nop
-
-_ramfunc_done:
 
         ##################################################################
         # Initialize cp0 registers
