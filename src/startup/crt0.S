@@ -74,13 +74,13 @@
 ############################
 # Begin ISA switching code #
 ############################
+        .set nomicromips
 
-#if defined (__mips_micromips)
-        .set micromips
-#endif
-
+// make sure this is 16 bytes long.
 _reset:
         jal _startup
+        nop
+        nop
         nop
 
 ############################
@@ -93,7 +93,7 @@ _reset:
         .size _reset, .-_reset
 
         .section .reset.startup,"ax",@progbits
-        .align 2
+        .align 4                        # Align to 16-byte boundary (cache line)
         .set noreorder
 
         ##################################################################
@@ -115,7 +115,6 @@ _reset:
         # 13. Clear BEV (use normal exception vectors)
         # 14. Jump to main via _main_entry
         ##################################################################
-        .align 2
         .globl _startup
         .set noreorder
         .ent _startup
@@ -130,6 +129,7 @@ _startup:
         #  - Certain critical hardware errors
         ##################################################################
         mfc0    $26,_CP0_STATUS         # k0 = $26
+        ehb                             # ensure cp0 read
         ext     $26,$26,19,1            # Extract NMI bit (bit 19)
         beqz    $26,_no_nmi             # if not NMI, continue normal boot
         nop
@@ -138,7 +138,7 @@ _startup:
         jr      $26                     # jump to NMI handler (does not return)
         nop
 _no_nmi:
-
+        .set macro
         ##################################################################
         # Initialize Stack Pointer
         #   _stack is initialized by the linker script to point to the
@@ -184,10 +184,12 @@ _no_nmi:
         ##################################################################
         # Call the "on reset" procedure
         ##################################################################
-        lui     $8,%hi(_on_reset)       # t0 = $8
-        addiu   $8,$8,%lo(_on_reset)
+        la     $8,_on_reset       # t0 = $8
+        nop
+        nop
         jalr    $8
         nop
+
 
         ##################################################################
         # Initialize TLB for fixed mapping to EBI and SQI (if function exists)
@@ -367,6 +369,7 @@ _init_check:
         mtc0    $8,_CP0_STATUS
         
 #if defined(PIC32WK) && defined(_CP0_CONFIG3) && defined (__mips_micromips)
+
         # Ensure that the ISAONEXEC bit is set for the microMIPS ISA for the PIC32WK family
         # _bsc0 (_CP0_CONFIG3, _CP0_CONFIG3_SELECT, ISAONEXEC_MASK)
         li      $9,0x10000              # ISAONEXEC bit
