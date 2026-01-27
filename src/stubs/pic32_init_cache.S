@@ -34,6 +34,7 @@
  *
  *-------------------------------------------------------------------------*/
 
+#include <xc.h>
 #include <cp0defs.h>
 
         /* Symbols defined in linker script */
@@ -121,66 +122,66 @@ __pic32_scache_ways:
         .set nomips16
         .ent __size_cache
 __size_cache:
-        mfc0 $9,_CP0_CONFIG             # cfg = $9 (t1)
+        mfc0 t1,_CP0_CONFIG             # cfg = t1 (t1)
 
-        li $10,0                        # icachesize = $10 (t2)
-        li $11,0                        # ilinesize = $11 (t3)
-        li $13,0                        # dcachesize = $13 (t5)
-        li $14,0                        # dlinesize = $14 (t6)
+        li t2,0                        # icachesize = t2 (t2)
+        li t3,0                        # ilinesize = t3 (t3)
+        li t5,0                        # dcachesize = t5 (t5)
+        li t6,0                        # dlinesize = t6 (t6)
 
         /* Check that we have Config1 */
-        and $8,$9,_CP0_CONFIG_M_MASK    # tmp = $8 (t0)
-        mfc0 $9,_CP0_CONFIG1            # cfg = $9
-        beqz $8,9f
+        and t0,t1,_CP0_CONFIG_M_MASK    # tmp = t0 (t0)
+        mfc0 t1,_CP0_CONFIG1            # cfg = t1
+        beqz t0,9f
         nop
 
         /* Get icache line size (log2) */
-        and $8,$9,_CP0_CONFIG1_IL_MASK
-        srl $8,_CP0_CONFIG1_IL_POSITION
-        beqz $8,8f                      # no i-cache
-        addiu $8,$8,1
+        and t0,t1,_CP0_CONFIG1_IL_MASK
+        srl t0,_CP0_CONFIG1_IL_POSITION
+        beqz t0,8f                      # no i-cache
+        addiu t0,t0,1
 
         /* Get number of icache ways */
-        and $12,$9,_CP0_CONFIG1_IA_MASK # iways = $12 (t4)
-        srl $12,_CP0_CONFIG1_IA_POSITION
-        addiu $12,$12,1
-        move $10,$12                    # icachesize = iways
+        and t4,t1,_CP0_CONFIG1_IA_MASK # iways = t4 (t4)
+        srl t4,_CP0_CONFIG1_IA_POSITION
+        addiu t4,t4,1
+        move t2,t4                    # icachesize = iways
 
         /* total icache size = lines/way * linesize *ways */
-        li $11,1                        # ilinesize = 1
-        sll $11,$11,$8                  # ilinesize <<= tmp
-        sll $10,$10,$8                  # icachesize <<= tmp
+        li t3,1                        # ilinesize = 1
+        sll t3,t3,t0                  # ilinesize <<= tmp
+        sll t2,t2,t0                  # icachesize <<= tmp
 
         /* get icache lines per way */
-        and $8,$9,_CP0_CONFIG1_IS_MASK
-        srl $8,_CP0_CONFIG1_IS_POSITION
-        addiu $8,$8,6
-        sll $10,$10,$8                  # icachesize <<= tmp
+        and t0,t1,_CP0_CONFIG1_IS_MASK
+        srl t0,_CP0_CONFIG1_IS_POSITION
+        addiu t0,t0,6
+        sll t2,t2,t0                  # icachesize <<= tmp
 
         /* Get dcache line size (log2) */
-8:      and $8,$9,_CP0_CONFIG1_DL_MASK
-        srl $8,_CP0_CONFIG1_DL_POSITION
-        beqz $8,8f                      # no d-cache
-        addiu $8,$8,1
+8:      and t0,t1,_CP0_CONFIG1_DL_MASK
+        srl t0,_CP0_CONFIG1_DL_POSITION
+        beqz t0,8f                      # no d-cache
+        addiu t0,t0,1
 
         /* Get number of dcache ways */
-        and $15,$9,_CP0_CONFIG1_DA_MASK # dways = $15 (t7)
-        srl $15,_CP0_CONFIG1_DA_POSITION
-        addiu $15,$15,1
-        move $13,$15                    # dcachesize = dways
+        and t7,t1,_CP0_CONFIG1_DA_MASK # dways = t7 (t7)
+        srl t7,_CP0_CONFIG1_DA_POSITION
+        addiu t7,t7,1
+        move t5,t7                    # dcachesize = dways
 
         /* Total dcache size = lines/way * linesize * ways */
-        li $14,1                        # dlinesize = 1
-        sll $14,$14,$8                  # dlinesize <<= tmp
-        sll $13,$13,$8                  # dcachesize <<= tmp
+        li t6,1                        # dlinesize = 1
+        sll t6,t6,t0                  # dlinesize <<= tmp
+        sll t5,t5,t0                  # dcachesize <<= tmp
 
-        and $8,$9,_CP0_CONFIG1_DS_MASK
-        srl $8,_CP0_CONFIG1_DS_POSITION
-        addiu $8,$8,6
-        sll $13,$13,$8                  # dcachesize <<= tmp
+        and t0,t1,_CP0_CONFIG1_DS_MASK
+        srl t0,_CP0_CONFIG1_DS_POSITION
+        addiu t0,t0,6
+        sll t5,t5,t0                  # dcachesize <<= tmp
 
 8:
-9:      jr $31                          # ra = $31
+9:      jr ra                          # ra = ra
         nop
         .size __size_cache,.-__size_cache
         .end __size_cache
@@ -196,24 +197,24 @@ __size_cache:
         .ent __pic32_size_cache
 
 __pic32_size_cache:
-        lw $8,__pic32_icache_size       # t0 = $8
-        move $7,$31                     # a3 = $7, save_ra = $31
-        bgtz $8,8f                      # already known?
+        lw t0,__pic32_icache_size       # t0 = t0
+        move a3,ra                     # a3 = a3, save_ra = ra
+        bgtz t0,8f                      # already known?
         nop
 
         bal __size_cache
         nop
-        move $31,$7                     # restore ra
+        move ra,a3                     # restore ra
 
 ..savesize:
-        sw $10,__pic32_icache_size      # icachesize = $10
-        sw $13,__pic32_dcache_size      # dcachesize = $13
-        sw $11,__pic32_icache_linesize  # ilinesize = $11
-        sw $14,__pic32_dcache_linesize  # dlinesize = $14
-        sw $12,__pic32_icache_ways      # iways = $12
-        sw $15,__pic32_dcache_ways      # dways = $15
+        sw t2,__pic32_icache_size      # icachesize = t2
+        sw t5,__pic32_dcache_size      # dcachesize = t5
+        sw t3,__pic32_icache_linesize  # ilinesize = t3
+        sw t6,__pic32_dcache_linesize  # dlinesize = t6
+        sw t4,__pic32_icache_ways      # iways = t4
+        sw t7,__pic32_dcache_ways      # dways = t7
 
-8:      jr $31
+8:      jr ra
         nop
         .size __pic32_size_cache,.-__pic32_size_cache
         .end __pic32_size_cache
@@ -230,16 +231,16 @@ __pic32_size_cache:
 __pic32_init_cache:
 
         /* If the cache is enabled, then return. */
-        mfc0 $8,_CP0_CONFIG             # Load the Config register (t0 = $8)
-        li $9,_CP0_CONFIG_K0_MASK       # Load the K0 mask (t1 = $9)
-        and $9,$8,$9                    # Get the K0 bits of the Config register
-        xori $9,$9,_CACHE_DISABLE       # Check if equal to the disable value
-        beqz $9,1f                      # If 0, then disabled. Jump over and continue
+        mfc0 t0,_CP0_CONFIG             # Load the Config register (t0 = t0)
+        li t1,_CP0_CONFIG_K0_MASK       # Load the K0 mask (t1 = t1)
+        and t1,t0,t1                    # Get the K0 bits of the Config register
+        xori t1,t1,_CACHE_DISABLE       # Check if equal to the disable value
+        beqz t1,1f                      # If 0, then disabled. Jump over and continue
         nop
-        jr $31                          # If not 0, return.
+        jr ra                          # If not 0, return.
         nop
 
-1:      move $3,$31                     # save_ra = v1 = $3
+1:      move $3,ra                     # save_ra = v1 = $3
         bal __size_cache
         nop
 
@@ -257,11 +258,11 @@ __pic32_init_cache:
         .set noreorder
         # Disable interrupts and set UM=1
         # Save current status in tmp
-        mfc0 $8,_CP0_STATUS
-        li $9,~_CP0_STATUS_IE_MASK
-        and $9,$8,$9
-        or $9,$9,_CP0_STATUS_ERL_MASK
-        mtc0 $9,_CP0_STATUS
+        mfc0 t0,_CP0_STATUS
+        li t1,~_CP0_STATUS_IE_MASK
+        and t1,t0,t1
+        or t1,t1,_CP0_STATUS_ERL_MASK
+        mtc0 t1,_CP0_STATUS
         ehb
 
         mtc0 $0,_CP0_ERRCTL
@@ -270,35 +271,35 @@ __pic32_init_cache:
 
         /* Initialize primary instruction cache */
         .set noreorder
-4:      lui $4,%hi(__pic32_init_cache_program_base_addr)  # a0 = $4
-        addiu $4,$4,%lo(__pic32_init_cache_program_base_addr)
-        bne $4,$0,0f
+4:      lui a0,%hi(__pic32_init_cache_program_base_addr)  # a0 = a0
+        addiu a0,a0,%lo(__pic32_init_cache_program_base_addr)
+        bne a0,$0,0f
         nop
         /* Use a default if the symbol is not defined */
-        li $4,0x9D000000                # KSEG0_PROGRAM_BASE
-0:      beqz $10,8f                     # icachesize = $10 (t2)
+        li a0,0x9D000000                # KSEG0_PROGRAM_BASE
+0:      beqz t2,8f                     # icachesize = t2 (t2)
         nop
-        addu $5,$4,$10                  # limit = base + icachesize (a1 = $5)
-1:      cache Index_Store_Tag_I,-4($4)  # BDSLOT: clear tag
-        addu $4,$4,$11                  # a0 += ilinesize ($11 = t3)
-        bne $4,$5,1b
+        addu a1,a0,t2                  # limit = base + icachesize (a1 = a1)
+1:      cache Index_Store_Tag_I,-4(a0)  # BDSLOT: clear tag
+        addu a0,a0,t3                  # a0 += ilinesize (t3 = t3)
+        bne a0,a1,1b
         nop
 
         /* Initialize primary data cache */
         .set noreorder
-8:      lui $4,%hi(__pic32_init_cache_data_base_addr)
-        addiu $4,$4,%lo(__pic32_init_cache_data_base_addr)
-        bne $4,$0,0f
+8:      lui a0,%hi(__pic32_init_cache_data_base_addr)
+        addiu a0,a0,%lo(__pic32_init_cache_data_base_addr)
+        bne a0,$0,0f
         nop
         /* Use a default if the symbol is not defined */
-        li $4,0x80000000                # KSEG_DATA_BASE
+        li a0,0x80000000                # KSEG_DATA_BASE
 
-0:      beqz $13,8f                     # dcachesize = $13 (t5)
+0:      beqz t5,8f                     # dcachesize = t5 (t5)
         nop
-        addu $5,$4,$13                  # limit = base + dcachesize
-1:      cache Index_Store_Tag_D,-4($4)  # BDSLOT: clear tag
-        addu $4,$4,$14                  # a0 += dlinesize ($14 = t6)
-        bne $4,$5,1b
+        addu a1,a0,t5                  # limit = base + dcachesize
+1:      cache Index_Store_Tag_D,-4(a0)  # BDSLOT: clear tag
+        addu a0,a0,t6                  # a0 += dlinesize (t6 = t6)
+        bne a0,a1,1b
         nop
 
         .set reorder
@@ -306,31 +307,31 @@ __pic32_init_cache:
 8:      sync
 
         /* Store the sizes only after the caches are initialized */
-4:      sw $10,__pic32_icache_size      # icachesize = $10
-        sw $13,__pic32_dcache_size      # dcachesize = $13
-        sw $11,__pic32_icache_linesize  # ilinesize = $11
-        sw $14,__pic32_dcache_linesize  # dlinesize = $14
-        sw $12,__pic32_icache_ways      # iways = $12
-        sw $15,__pic32_dcache_ways      # dways = $15
+4:      sw t2,__pic32_icache_size      # icachesize = t2
+        sw t5,__pic32_dcache_size      # dcachesize = t5
+        sw t3,__pic32_icache_linesize  # ilinesize = t3
+        sw t6,__pic32_dcache_linesize  # dlinesize = t6
+        sw t4,__pic32_icache_ways      # iways = t4
+        sw t7,__pic32_dcache_ways      # dways = t7
 
         .set noreorder
 
         # restore status
-        mtc0 $8,_CP0_STATUS
+        mtc0 t0,_CP0_STATUS
         ehb
 
         # Configure Cache Mode
-        mfc0 $9, _CP0_CONFIG
-        ori $9, $9, _CP0_CONFIG_K0_MASK
-        xori $9, $9, _CP0_CONFIG_K0_MASK
-        ori $9, $9, __PIC32_CACHE_MODE
-        mtc0 $9, _CP0_CONFIG
+        mfc0 t1, _CP0_CONFIG
+        ori t1, t1, _CP0_CONFIG_K0_MASK
+        xori t1, t1, _CP0_CONFIG_K0_MASK
+        ori t1, t1, __PIC32_CACHE_MODE
+        mtc0 t1, _CP0_CONFIG
         ehb
 
         .set reorder
 
-        move $31, $3                    # restore ra from save_ra
-        jr $31
+        move ra, $3                    # restore ra from save_ra
+        jr ra
         nop
         .size __pic32_init_cache,.-__pic32_init_cache
         .end __pic32_init_cache

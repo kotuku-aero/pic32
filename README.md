@@ -63,11 +63,11 @@ The PIC32 startup code (crt0.S) requires specific linker symbols that are not pr
 ```cmake
 target_link_options(your_target PRIVATE
     -T${PIC32_LINKER_SCRIPT}
-    # Required symbols for crt0.S data initialization
+    # Required symbols for crt0_EF.S data initialization
     -Wl,--defsym=__data_start=0x80000000
     -Wl,--defsym=__data_init=0x80000000
     -Wl,--defsym=__data_end=0x80000000
-    # Required symbols for crt0.S RAM function support
+    # Required symbols for crt0_EF.S RAM function support
     -Wl,--defsym=__ramfunc_begin=0
     -Wl,--defsym=__ramfunc_end=0
     -Wl,--defsym=__ramfunc_load=0

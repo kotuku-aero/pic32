@@ -95,11 +95,6 @@ BMXDUPBA = 0xBF882030
 
 #include <cp0defs.h>
 
-#ifdef __LIBBUILD__
-   .file 1 "debug-exception-return.S"
-   .loc 1 0
-#endif
-
         .extern __pic32_software_reset
 
         ##################################################################

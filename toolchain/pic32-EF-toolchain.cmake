@@ -136,7 +136,7 @@ set(CMAKE_ASM_FLAGS_INIT "${PIC32_CPU_FLAGS} ${PIC32_INCLUDE_FLAGS}")
 
 # Base linker flags
 set(PIC32_LINKER_FLAGS "-nostartfiles -Wl,--gc-sections -L${TOOLCHAIN_PATH}/pic32/lib/el/mfp64")
-# -nostartfiles = We provide our own crt0.S
+# -nostartfiles = We provide our own crt0_EF.S
 # --gc-sections = Remove unused code/data sections
 # -L...mfp64 = Use libraries compiled with -mfp64 (hard float, 64-bit FPU registers)
 

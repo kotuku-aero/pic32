@@ -397,9 +397,9 @@ patch_data_sections_for_lma() {
     # Handle the closing of .jcr section
     in_jcr && /} *>kseg0_data_mem$/ {
         print "  } >kseg0_data_mem AT > kseg0_program_mem"
-        print "  /* Export the start of data memory for crt0.S */"
+        print "  /* Export the start of data memory for crt0_EF.S */"
         print "  _data_begin = .;"
-        print "  /* LMA (flash address) of initialized data for crt0.S to copy from */"
+        print "  /* LMA (flash address) of initialized data for crt0_EF.S to copy from */"
         print "  _data_init = LOADADDR(.jcr);"
         in_jcr = 0
         first_data_section_done = 1

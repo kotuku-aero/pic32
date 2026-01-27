@@ -94,11 +94,6 @@ BMXDUDBA = 0xBF882020
 BMXDUPBA = 0xBF882030
 
 #include <cp0defs.h>
-
-#ifdef __LIBBUILD__
-   .file 1 "simple-tlb-refill-exception.S"
-   .loc 1 0
-#endif
   ###################
   # Default Simple TLB-Refill handler
   ###################

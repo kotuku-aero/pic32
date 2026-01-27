@@ -129,7 +129,7 @@ set(CMAKE_ASM_FLAGS_INIT "${PIC32_CPU_FLAGS} ${PIC32_INCLUDE_FLAGS}")
 
 # Base linker flags
 set(PIC32_LINKER_FLAGS "-nostartfiles -Wl,--gc-sections")
-# -nostartfiles = We provide our own crt0.S
+# -nostartfiles = We provide our own crt0_EF.S
 # --gc-sections = Remove unused code/data sections
 
 # Float printf support (optional - adds ~10-15KB)

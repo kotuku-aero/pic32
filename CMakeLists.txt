@@ -578,8 +578,7 @@ set(DSPR_SOURCES
 
 set(STARTUP_SOURCES
         src/startup/cache-err-exception.S
-        src/startup/crt0.S
-        src/startup/crt0_pic.S
+#        src/startup/crt0_pic.S
         src/startup/crti.S
         src/startup/crtn.S
         src/startup/debug-exception-return.S
@@ -589,6 +588,17 @@ set(STARTUP_SOURCES
         src/startup/software-debug-break.c
 )
 
+if(PIC32_FAMILY STREQUAL "EF")
+    set(CRT0_SOURCES
+            src/startup/crt0_EF.S
+    )
+elseif(PIC32_FAMILY STREQUAL "DA")
+    set(CRT0_SOURCES
+            src/startup/crt0_DA.S
+    )
+else()
+    message(ERROR "Only DA,EF is supported for the PIC32_FAMILY")
+endif()
 set(STUBS_SOURCES
         src/stubs/default-bootstrap-exception-handler.c
         src/stubs/default-cache-err-exception-handler.c
@@ -618,6 +628,7 @@ set(LIBPIC32_SOURCES
         ${DSPR2_SOURCES}
         ${STARTUP_SOURCES}
         ${STUBS_SOURCES}
+        ${CRT0_SOURCES}
         include/cp0defs.h
         include/sys/asm.h
 )
