@@ -12,10 +12,12 @@
  *   // code to handle _I2C1_MASTER_VECTOR.  Note that no floating point operations
  *   // are allowed and only interrupt safe system calls are allowed
  *   }
+ *   interrupt(ipl7)
  */
 
-#define interrupt_handler(vector) \
+#define interrupt_handler(vector, ...) \
 __attribute__((section(".vector_" #vector))) \
+__attribute__((interrupt, keep_interrupts_masked, __VA_ARGS__)) \
 __vector_dispatch_##vector(void) { \
 __asm__ __volatile__ ( \
 ".set push\n" \
@@ -25,7 +27,7 @@ __asm__ __volatile__ ( \
 ".set pop\n" \
 ); \
 } \
-__attribute__((interrupt, keep_interrupts_masked)) \
 void __isr_impl_##vector (void)
+
 
 #endif
